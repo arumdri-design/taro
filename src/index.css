@@ -1,0 +1,76 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body {
+  background-color: #0a0618;
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+}
+
+.font-serif {
+  font-feature-settings: 'ss01';
+}
+
+.tarot-card {
+  perspective: 1000px;
+}
+
+.tarot-card-inner {
+  transform-style: preserve-3d;
+  transition: transform 0.7s cubic-bezier(0.4, 0.2, 0.2, 1);
+}
+
+.tarot-card.flipped .tarot-card-inner {
+  transform: rotateY(180deg);
+}
+
+.tarot-card-face {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.tarot-card-back {
+  transform: rotateY(180deg);
+}
+
+.starfield-bg {
+  background:
+    radial-gradient(ellipse at 20% 0%, rgba(124, 92, 214, 0.18) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 10%, rgba(168, 131, 58, 0.12) 0%, transparent 45%),
+    radial-gradient(ellipse at 50% 100%, rgba(42, 29, 92, 0.6) 0%, transparent 60%),
+    linear-gradient(180deg, #0a0618 0%, #120a2a 50%, #1c1240 100%);
+}
+
+.gold-text {
+  background: linear-gradient(135deg, #f5e6c4 0%, #d9b96a 45%, #a8833a 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.gold-border {
+  border: 1px solid rgba(217, 185, 106, 0.35);
+  box-shadow:
+    0 0 0 1px rgba(217, 185, 106, 0.1),
+    0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0a0618;
+}
+::-webkit-scrollbar-thumb {
+  background: #2a1d5c;
+  border-radius: 3px;
+}
+
+textarea,
+input {
+  font-family: inherit;
+}
