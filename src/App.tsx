@@ -191,23 +191,23 @@ export default function App() {
         {/* 1단계: 점술가 선택 + 고민 입력 */}
         {stage === 'question' && (
           <section className="mt-4 animate-fade-in-up">
-            {/* 1:1 비율 점술가 선택 영역 (선명한 배경 + 하단 선택 버튼) */}
+            {/* 1:1 비율 점술가 선택 영역 (해석자 문구 -> 선택 버튼 순서로 하단 배치) */}
             <div className="relative w-full aspect-square overflow-hidden rounded-2xl border border-gold-500/35 mb-4 shadow-xl shadow-black/40">
               <img
                 src={reader.image}
                 alt={`${reader.name} 점술가`}
                 className="absolute inset-0 w-full h-full object-cover object-center transition-all duration-300"
               />
-              <div className="absolute inset-0 bg-gradient-to-b from-night-950/25 via-transparent to-night-950/75" />
+              <div className="absolute inset-0 bg-gradient-to-b from-transparent via-night-950/20 to-night-950/80" />
 
-              <div className="relative z-10 flex flex-col justify-between h-full p-4 text-center">
-                {/* 상단 해석자 문구 */}
-                <p className="text-xs sm:text-sm text-white leading-relaxed max-w-xs mx-auto drop-shadow-[0_1px_4px_rgba(0,0,0,0.85)]">
+              <div className="relative z-10 flex flex-col justify-end h-full p-4 text-center">
+                {/* 선택 버튼 바로 위쪽 해석자 문구 */}
+                <p className="mb-3 text-xs sm:text-sm text-white leading-relaxed max-w-xs mx-auto drop-shadow-[0_1px_4px_rgba(0,0,0,0.85)]">
                   &ldquo;{reader.greeting}&rdquo;
                 </p>
 
                 {/* 가장 밑쪽 루나/카이 선택 버튼 */}
-                <div className="mt-auto flex items-center justify-center gap-2 pb-1">
+                <div className="flex items-center justify-center gap-2 pb-1">
                   {readers.map((r) => (
                     <button
                       key={r.id}
