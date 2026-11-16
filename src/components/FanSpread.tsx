@@ -11,73 +11,114 @@ interface FanSpreadProps {
   onPick: (index: number) => void;
 }
 
-// 부채꼴 각도 범위와 들림 높이
-const ARC_SPAN = 100; // degrees
-const MAX_ROTATION = ARC_SPAN / 2;
-const ARC_DROP = 26; // px, 가장자리 카드가 가운데보다 내려가는 깊이
-const MAX_VISIBLE = 26; // 한 화면에 펼쳐지는 최대 카드 수
+// 한 화면에 겹쳐서 펼칠 카드 수 (78장을 한 줄에 욱여넣지 않도록 15장 샘플링)
+const MAX_VISIBLE = 15;
+const ARC_SPAN = 64; // 부채꼴 전체 각도 (도)
+const ARC_DROP = 18; // 가장자리 카드가 내려가는 깊이 (px)
 
 export default function FanSpread({ deck, picked, disabled, onPick }: FanSpreadProps) {
-  // 78장 전체가 아니라 균등하게 샘플링한 카드를 한 화면에 펼침
   const slots = useMemo(() => {
+    if (!deck.length) return [];
     const count = Math.min(deck.length, MAX_VISIBLE);
     const indices: number[] = [];
-    for (let i = 0; i < count; i++) {
-      indices.push(Math.round((i * (deck.length - 1)) / (count - 1)));
+
+    if (count === 1) {
+      indices.push(0);
+    } else {
+      for (let i = 0; i < count; i++) {
+        indices.push(Math.round((i * (deck.length - 1)) / (count - 1)));
+      }
     }
-    return indices.map((deckIndex, i) => ({ deckIndex, slot: i, total: count }));
+
+    return indices.map((deckIndex, slot) => ({
+      deckIndex,
+      slot,
+      total: count,
+    }));
   }, [deck]);
 
   return (
-    <div className="relative w-full select-none" style={{ height: 'clamp(200px, 52vw, 280px)' }}>
-      {slots.map(({ deckIndex, slot, total }) => {
-        const t = total > 1 ? slot / (total - 1) : 0.5; // 0..1
-        const angle = (t - 0.5) * ARC_SPAN;
-        const mid = (t - 0.5) * 2; // -1..1
-        const drop = Math.abs(mid) * ARC_DROP;
-        const pickIdx = picked.indexOf(deckIndex);
-        const revealed = pickIdx !== -1;
-        const isHighlighted = revealed;
-        const cardWidth = 'clamp(64px, 18vw, 92px)';
-        return (
-          <div
-            key={deckIndex}
-            className="absolute left-1/2 bottom-4"
-            style={{
-              width: cardWidth,
-              height: 'calc(1.6 * clamp(64px, 18vw, 92px))',
-              transform: `translateX(-50%) rotate(${angle}deg) translateY(${drop}px)`,
-              transformOrigin: 'bottom center',
-              zIndex: isHighlighted ? 60 : 10 + slot,
-              transition: 'transform 0.3s ease, z-index 0s',
-            }}
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLElement).style.zIndex = '80';
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLElement).style.zIndex = isHighlighted ? '60' : `${10 + slot}`;
-            }}
-          >
-            <div className="absolute inset-x-0 bottom-0 hover:-translate-y-4 transition-transform duration-300">
-              <TarotCardView
-                card={deck[deckIndex].card}
-                reversed={deck[deckIndex].reversed}
-                revealed={revealed}
-                selected={revealed}
-                disabled={disabled || (picked.length >= 3 && !revealed)}
-                label={revealed ? POSITIONS[pickIdx] : undefined}
-                index={slot}
-                onClick={() => onPick(deckIndex)}
-              />
-            </div>
-          </div>
-        );
-      })}
-      {/* 테이블 느낌의 부드러운 그림자 아치 */}
+    <div className="mt-4 w-full select-none">
+      {/* 카드 선택 안내 */}
+      <p className="mb-3 text-center text-[11px] text-mystic-300/75">
+        마음이 끌리는 카드 3장을 눌러 선택해 주세요
+      </p>
+
+      {/* 부채꼴 카드 스프레드 영역 */}
       <div
-        className="absolute left-1/2 -translate-x-1/2 bottom-2 w-4/5 h-6 rounded-full bg-black/50 blur-md pointer-events-none"
-        aria-hidden
-      />
+        className="relative mx-auto w-full overflow-x-auto overflow-y-visible py-3"
+        style={{ minHeight: 'clamp(220px, 56vw, 290px)' }}
+      >
+        <div
+          className="relative mx-auto flex items-end justify-center"
+          style={{
+            width: '100%',
+            minWidth: '320px',
+            height: 'clamp(210px, 54vw, 275px)',
+          }}
+        >
+          {slots.map(({ deckIndex, slot, total }) => {
+            const t = total > 1 ? slot / (total - 1) : 0.5; // 0..1
+            const mid = (t - 0.5) * 2; // -1..1
+            const angle = mid * (ARC_SPAN / 2);
+            const drop = Math.abs(mid) * ARC_DROP;
+            // 중앙 기준으로 가로 간격을 넉넉히 배분해 카드 뒷면이 선처럼 찌그러지지 않게 함
+            const spreadX = mid * 118;
+
+            const pickIdx = picked.indexOf(deckIndex);
+            const revealed = pickIdx !== -1;
+            const isMaxPicked = picked.length >= 3 && !revealed;
+
+            return (
+              <div
+                key={`${deckIndex}-${slot}`}
+                className="absolute bottom-3 left-1/2 transition-all duration-300"
+                style={{
+                  width: 'clamp(72px, 19vw, 94px)',
+                  transform: `translateX(calc(-50% + ${spreadX}px)) translateY(${
+                    revealed ? -14 : drop
+                  }px) rotate(${revealed ? 0 : angle}deg)`,
+                  transformOrigin: 'bottom center',
+                  zIndex: revealed ? 60 + pickIdx : 10 + slot,
+                }}
+                onMouseEnter={(e) => {
+                  if (!revealed) {
+                    (e.currentTarget as HTMLElement).style.zIndex = '55';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!revealed) {
+                    (e.currentTarget as HTMLElement).style.zIndex = `${10 + slot}`;
+                  }
+                }}
+              >
+                <div
+                  className={`transition-transform duration-200 ${
+                    !disabled && !isMaxPicked && !revealed ? 'hover:-translate-y-3' : ''
+                  }`}
+                >
+                  <TarotCardView
+                    card={deck[deckIndex].card}
+                    reversed={deck[deckIndex].reversed}
+                    revealed={revealed}
+                    selected={revealed}
+                    disabled={disabled || isMaxPicked}
+                    label={revealed ? POSITIONS[pickIdx] : undefined}
+                    index={slot}
+                    onClick={() => onPick(deckIndex)}
+                  />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* 테이블 위 은은한 그림자 */}
+        <div
+          className="pointer-events-none mx-auto -mt-2 h-5 w-4/5 rounded-full bg-black/55 blur-md"
+          aria-hidden
+        />
+      </div>
     </div>
   );
 }
