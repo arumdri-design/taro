@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Moon,
   Shuffle,
@@ -68,7 +68,11 @@ export default function App() {
   };
 
   const revealedCards = useMemo(
-    () => picked.map((i) => ({ ...deck[i], position: POSITIONS[picked.indexOf(i)] })),
+    () =>
+      picked.map((cardIdx, posIdx) => ({
+        ...deck[cardIdx],
+        position: POSITIONS[posIdx],
+      })),
     [deck, picked]
   );
 
@@ -89,7 +93,7 @@ export default function App() {
 
   const pickCard = (index: number) => {
     if (stage !== 'select' || picked.includes(index) || picked.length >= MAX_PICKS) return;
-    setPicked([...picked, index]);
+    setPicked((prev) => [...prev, index]);
   };
 
   const showReading = async () => {
@@ -132,7 +136,11 @@ export default function App() {
     <div className="flex flex-col items-center text-center mb-5 animate-fade-in">
       <div className="w-24 sm:w-28 rounded-2xl p-0.5 bg-gradient-to-br from-gold-300 via-gold-500 to-gold-600 shadow-lg shadow-gold-500/25 mb-3">
         <div className="rounded-2xl overflow-hidden border-2 border-night-900">
-          <ReaderAvatar readerId={reader.id} className="w-full aspect-square" />
+          <ReaderAvatar
+            src={reader.image}
+            name={reader.name}
+            className="w-full aspect-square"
+          />
         </div>
       </div>
       <p className="text-xs text-gold-400 font-serif tracking-widest">{reader.nameEn}</p>
@@ -194,7 +202,11 @@ export default function App() {
             <div className="flex flex-col items-center text-center mb-6">
               <div className="w-28 sm:w-32 rounded-2xl p-0.5 bg-gradient-to-br from-gold-300 via-gold-500 to-gold-600 shadow-lg shadow-gold-500/25 mb-3 animate-float">
                 <div className="rounded-2xl overflow-hidden border-2 border-night-900">
-                  <ReaderAvatar readerId={reader.id} className="w-full aspect-square" />
+                  <ReaderAvatar
+                    src={reader.image}
+                    name={reader.name}
+                    className="w-full aspect-square"
+                  />
                 </div>
               </div>
               <p className="text-xs text-gold-400 font-serif tracking-[0.25em]">{reader.nameEn}</p>
@@ -202,7 +214,7 @@ export default function App() {
                 {reader.name} 점술가
               </h1>
               <p className="mt-2 text-xs text-mystic-300/90 leading-relaxed max-w-xs">
-                "{reader.greeting}"
+                &ldquo;{reader.greeting}&rdquo;
               </p>
             </div>
 
@@ -211,6 +223,7 @@ export default function App() {
               {readers.map((r) => (
                 <button
                   key={r.id}
+                  type="button"
                   onClick={() => setReader(r)}
                   className={`rounded-2xl p-2.5 text-center transition-all border ${
                     reader.id === r.id
@@ -219,14 +232,18 @@ export default function App() {
                   }`}
                 >
                   <div
-                    className={`w-12 mx-auto rounded-full p-0.5 mb-2 ${
+                    className={`w-14 mx-auto rounded-full p-0.5 mb-2 ${
                       reader.id === r.id
                         ? 'bg-gradient-to-br from-gold-300 to-gold-500'
                         : 'bg-mystic-500/40'
                     }`}
                   >
                     <div className="rounded-full overflow-hidden">
-                      <ReaderAvatar readerId={r.id} className="w-full aspect-square" />
+                      <ReaderAvatar
+                        src={r.image}
+                        name={r.name}
+                        className="w-full aspect-square"
+                      />
                     </div>
                   </div>
                   <p
@@ -258,6 +275,7 @@ export default function App() {
                   {['연애운', '직업운', '재물운', '오늘의 운세'].map((tag) => (
                     <button
                       key={tag}
+                      type="button"
                       onClick={() => setQuestion(`${tag}이 궁금해요. 앞으로 어떻게 될까요?`)}
                       className="rounded-full border border-mystic-500/40 bg-mystic-500/10 px-3 py-1 text-xs text-mystic-300 hover:border-gold-400 hover:text-gold-300 transition-colors"
                     >
@@ -269,6 +287,7 @@ export default function App() {
               </div>
 
               <button
+                type="button"
                 onClick={startShuffle}
                 disabled={!question.trim()}
                 className="w-full flex items-center justify-center gap-2 rounded-xl py-3.5 text-sm font-bold bg-gradient-to-r from-gold-500 to-gold-400 text-night-950 shadow-lg shadow-gold-500/20 disabled:opacity-40 disabled:shadow-none hover:shadow-gold-400/30 hover:brightness-110 transition-all active:scale-[0.98]"
@@ -287,10 +306,14 @@ export default function App() {
               {[0, 1, 2, 3, 4].map((i) => (
                 <div
                   key={i}
-                  className="w-14 h-20 sm:w-16 sm:h-24 rounded-lg border border-gold-500/40 bg-gradient-to-br from-night-800 to-night-950 animate-shuffle"
+                  className="w-14 h-24 sm:w-16 sm:h-28 rounded-lg border border-gold-500/40 bg-night-900 overflow-hidden animate-shuffle"
                   style={{ animationDelay: `${i * 0.1}s` }}
                 >
-                  <div className="m-1 h-[calc(100%-8px)] rounded border border-gold-500/20" />
+                  <img
+                    src="/images/card-back.png"
+                    alt="카드 뒷면"
+                    className="w-full h-full object-cover"
+                  />
                 </div>
               ))}
             </div>
@@ -316,7 +339,7 @@ export default function App() {
               {POSITIONS.map((pos, i) => (
                 <div
                   key={pos}
-                  className={`w-10 rounded-full border px-2 py-1 text-[10px] transition-colors ${
+                  className={`w-12 text-center rounded-full border px-2 py-1 text-[10px] transition-colors ${
                     picked.length > i
                       ? 'border-gold-400 bg-gold-500/20 text-gold-200'
                       : 'border-mystic-500/40 text-mystic-300/60'
@@ -342,6 +365,7 @@ export default function App() {
             )}
 
             <button
+              type="button"
               onClick={showReading}
               disabled={picked.length < MAX_PICKS}
               className="mt-6 w-full flex items-center justify-center gap-2 rounded-xl py-3.5 text-sm font-bold bg-gradient-to-r from-gold-500 to-gold-400 text-night-950 shadow-lg shadow-gold-500/20 disabled:opacity-40 disabled:shadow-none hover:brightness-110 transition-all active:scale-[0.98]"
@@ -359,7 +383,11 @@ export default function App() {
           <section className="mt-10 flex flex-col items-center animate-fade-in">
             <div className="w-24 sm:w-28 rounded-2xl p-0.5 bg-gradient-to-br from-gold-300 via-gold-500 to-gold-600 shadow-lg shadow-gold-500/25 mb-6">
               <div className="rounded-2xl overflow-hidden border-2 border-night-900">
-                <ReaderAvatar readerId={reader.id} className="w-full aspect-square" />
+                <ReaderAvatar
+                  src={reader.image}
+                  name={reader.name}
+                  className="w-full aspect-square"
+                />
               </div>
             </div>
             <div className="relative w-16 h-16 mb-4">
@@ -387,13 +415,13 @@ export default function App() {
                 {reader.name}가 전하는 이야기
               </h2>
               <p className="mt-1.5 text-xs text-mystic-300/70 leading-relaxed">
-                "{question.trim()}"
+                &ldquo;{question.trim()}&rdquo;
               </p>
             </div>
 
             <div className="flex justify-center gap-3 mb-6">
               {revealedCards.map((drawn, i) => (
-                <div key={i} className="w-24 sm:w-28">
+                <div key={i} className="w-28 sm:w-32">
                   <TarotCardView
                     card={drawn.card}
                     reversed={drawn.reversed}
@@ -410,7 +438,11 @@ export default function App() {
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-14 rounded-xl p-0.5 bg-gradient-to-br from-gold-300 via-gold-500 to-gold-600 shrink-0">
                   <div className="rounded-xl overflow-hidden border border-night-900">
-                    <ReaderAvatar readerId={reader.id} className="w-full aspect-square" />
+                    <ReaderAvatar
+                      src={reader.image}
+                      name={reader.name}
+                      className="w-full aspect-square"
+                    />
                   </div>
                 </div>
                 <div>
@@ -449,6 +481,7 @@ export default function App() {
 
             <div className="mt-6 grid grid-cols-2 gap-3">
               <button
+                type="button"
                 onClick={beginShuffle}
                 className="flex items-center justify-center gap-2 rounded-xl py-3.5 text-sm font-bold border border-gold-500/40 bg-night-800/60 text-gold-300 hover:bg-gold-500/10 transition-all active:scale-[0.98]"
               >
@@ -456,6 +489,7 @@ export default function App() {
                 다시 뽑기
               </button>
               <button
+                type="button"
                 onClick={copyResult}
                 className={`flex items-center justify-center gap-2 rounded-xl py-3.5 text-sm font-bold bg-gradient-to-r transition-all active:scale-[0.98] ${
                   copied
