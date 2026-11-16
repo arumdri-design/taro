@@ -190,51 +190,39 @@ export default function App() {
       )}
 
       <main className="relative z-10 max-w-lg mx-auto px-4 pb-16 sm:px-6">
-        {/* 1단계: 점술가 선택 + 고민 입력 (점술가 이미지 노출) */}
+        {/* 1단계: 점술가 선택 + 고민 입력 */}
         {stage === 'question' && (
           <section className="mt-6 animate-fade-in-up">
-            {/* 점술가 초상화 및 인사말 */}
-            <div className="flex flex-col items-center text-center mb-6">
-              <div className="w-28 sm:w-32 rounded-2xl p-0.5 bg-gradient-to-br from-gold-300 via-gold-500 to-gold-600 shadow-lg shadow-gold-500/25 mb-3 animate-float">
+            {/* 점술가 큰 이미지 (이미지 아래 이름 제거) */}
+            <div className="flex flex-col items-center text-center mb-4">
+              <div className="w-44 sm:w-52 rounded-2xl p-0.5 bg-gradient-to-br from-gold-300 via-gold-500 to-gold-600 shadow-xl shadow-gold-500/25 mb-3 animate-float">
                 <div className="rounded-2xl overflow-hidden border-2 border-night-900">
-                  <ReaderAvatar readerId={reader.id} className="w-full aspect-square" />
+                  <ReaderAvatar
+                    key={reader.id}
+                    readerId={reader.id}
+                    className="w-full aspect-square"
+                  />
                 </div>
               </div>
-              <p className="text-xs text-gold-400 font-serif tracking-[0.25em]">{reader.nameEn}</p>
-              <h1 className="font-serif text-xl font-bold gold-text mt-0.5">
-                {reader.name} 점술가
-              </h1>
-              <p className="mt-2 text-xs text-mystic-300/90 leading-relaxed max-w-xs">
+              <p className="text-xs text-mystic-300/90 leading-relaxed max-w-xs">
                 &ldquo;{reader.greeting}&rdquo;
               </p>
             </div>
 
-            {/* 점술가 선택 탭 */}
-            <div className="grid grid-cols-2 gap-3 mb-6">
+            {/* 점술가 선택 버튼: 이름만 작게 표시 */}
+            <div className="flex items-center justify-center gap-2 mb-5">
               {readers.map((r) => (
                 <button
                   key={r.id}
                   type="button"
                   onClick={() => setReader(r)}
-                  className={`rounded-2xl p-3 text-center transition-all border ${
+                  className={`rounded-full px-4 py-1.5 text-xs font-serif font-bold transition-all border ${
                     reader.id === r.id
-                      ? 'border-gold-400 bg-gold-500/15 shadow-lg shadow-gold-500/20'
-                      : 'border-mystic-500/30 bg-night-900/60 hover:border-gold-500/50'
+                      ? 'border-gold-400 bg-gold-500/20 text-gold-200 shadow-sm shadow-gold-500/20'
+                      : 'border-mystic-500/35 bg-night-900/60 text-mystic-300/80 hover:border-gold-500/50 hover:text-gold-200'
                   }`}
                 >
-                  <div className="w-14 mx-auto rounded-full p-0.5 mb-2 bg-gradient-to-br from-gold-300/70 to-gold-500/70">
-                    <div className="rounded-full overflow-hidden">
-                      <ReaderAvatar readerId={r.id} className="w-full aspect-square" />
-                    </div>
-                  </div>
-                  <p
-                    className={`text-sm font-bold font-serif ${
-                      reader.id === r.id ? 'text-gold-200' : 'text-mystic-300'
-                    }`}
-                  >
-                    {r.name}
-                  </p>
-                  <p className="text-[10px] text-mystic-300/70 leading-snug mt-0.5">{r.trait}</p>
+                  {r.name}
                 </button>
               ))}
             </div>
@@ -280,7 +268,7 @@ export default function App() {
           </section>
         )}
 
-        {/* 셔플 중 (점술가 이미지 미노출) */}
+        {/* 셔플 중 */}
         {stage === 'shuffle' && (
           <section className="mt-20 sm:mt-28 flex flex-col items-center animate-fade-in">
             <div className="flex gap-2 mb-8">
@@ -304,7 +292,7 @@ export default function App() {
           </section>
         )}
 
-        {/* 2단계: 카드 선택 (점술가 이미지 미노출) */}
+        {/* 2단계: 카드 선택 */}
         {(stage === 'select' || stage === 'loading') && (
           <section className="mt-5 animate-fade-in-up">
             {selectHeader(
@@ -359,7 +347,7 @@ export default function App() {
           </section>
         )}
 
-        {/* 로딩 (점술가 이미지 미노출) */}
+        {/* 로딩 */}
         {stage === 'loading' && (
           <section className="mt-8 flex flex-col items-center animate-fade-in">
             <div className="relative w-16 h-16 mb-4">
@@ -379,7 +367,7 @@ export default function App() {
           </section>
         )}
 
-        {/* 4단계: 결과 (점술가 이미지 노출) */}
+        {/* 4단계: 결과 */}
         {stage === 'result' && (
           <section className="mt-6 animate-fade-in-up">
             <div className="text-center mb-6">
@@ -410,7 +398,11 @@ export default function App() {
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-14 rounded-xl p-0.5 bg-gradient-to-br from-gold-300 via-gold-500 to-gold-600 shrink-0">
                   <div className="rounded-xl overflow-hidden border border-night-900">
-                    <ReaderAvatar readerId={reader.id} className="w-full aspect-square" />
+                    <ReaderAvatar
+                      key={reader.id}
+                      readerId={reader.id}
+                      className="w-full aspect-square"
+                    />
                   </div>
                 </div>
                 <div>
