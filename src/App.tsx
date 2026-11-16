@@ -190,19 +190,24 @@ export default function App() {
       <main className="relative z-10 max-w-lg mx-auto px-4 pb-16 sm:px-6">
         {/* 1단계: 점술가 선택 + 고민 입력 */}
         {stage === 'question' && (
-          <section className="mt-6 animate-fade-in-up">
-            {/* 선택된 루나/카이 이미지를 배경으로 사용하는 점술가 선택 영역 */}
-            <div className="relative overflow-hidden rounded-2xl border border-gold-500/35 mb-4 shadow-xl shadow-black/40">
+          <section className="mt-4 animate-fade-in-up">
+            {/* 1:1 비율 점술가 선택 영역 (선명한 배경 + 하단 선택 버튼) */}
+            <div className="relative w-full aspect-square overflow-hidden rounded-2xl border border-gold-500/35 mb-4 shadow-xl shadow-black/40">
               <img
                 src={reader.image}
                 alt={`${reader.name} 점술가`}
                 className="absolute inset-0 w-full h-full object-cover object-center transition-all duration-300"
               />
-              <div className="absolute inset-0 bg-gradient-to-b from-night-950/60 via-night-950/65 to-night-950/85" />
+              <div className="absolute inset-0 bg-gradient-to-b from-night-950/25 via-transparent to-night-950/75" />
 
-              <div className="relative z-10 flex flex-col items-center text-center px-4 py-6">
-                {/* 선택 버튼: 이름만 작게 표시 */}
-                <div className="flex items-center justify-center gap-2 mb-3">
+              <div className="relative z-10 flex flex-col justify-between h-full p-4 text-center">
+                {/* 상단 해석자 문구 */}
+                <p className="text-xs sm:text-sm text-white leading-relaxed max-w-xs mx-auto drop-shadow-[0_1px_4px_rgba(0,0,0,0.85)]">
+                  &ldquo;{reader.greeting}&rdquo;
+                </p>
+
+                {/* 가장 밑쪽 루나/카이 선택 버튼 */}
+                <div className="mt-auto flex items-center justify-center gap-2 pb-1">
                   {readers.map((r) => (
                     <button
                       key={r.id}
@@ -210,55 +215,51 @@ export default function App() {
                       onClick={() => setReader(r)}
                       className={`rounded-full px-4 py-1.5 text-xs font-serif font-bold transition-all border backdrop-blur-sm ${
                         reader.id === r.id
-                          ? 'border-gold-400 bg-gold-500/25 text-white shadow-sm shadow-gold-500/20'
-                          : 'border-white/30 bg-night-950/50 text-white/80 hover:border-gold-400/70 hover:text-white'
+                          ? 'border-gold-400 bg-gold-500/30 text-white shadow-sm shadow-gold-500/20'
+                          : 'border-white/35 bg-night-950/55 text-white/85 hover:border-gold-400/70 hover:text-white'
                       }`}
                     >
                       {r.name}
                     </button>
                   ))}
                 </div>
-
-                {/* 해석자 문구: 흰색 */}
-                <p className="text-xs sm:text-sm text-white leading-relaxed max-w-xs drop-shadow">
-                  &ldquo;{reader.greeting}&rdquo;
-                </p>
               </div>
             </div>
 
-            <div className="rounded-2xl gold-border bg-night-900/70 backdrop-blur-sm p-4">
-              <label className="block text-xs text-gold-400 mb-2 font-serif">
-                오늘의 고민
-              </label>
+            {/* 고민 입력 영역 (높이 절반 축소 + 태그 한 줄 출력) */}
+            <div className="rounded-2xl gold-border bg-night-900/70 backdrop-blur-sm p-3">
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-xs text-gold-400 font-serif">
+                  오늘의 고민
+                </label>
+                <span className="text-[10px] text-mystic-300/50">{question.length}/500</span>
+              </div>
               <textarea
                 value={question}
                 onChange={(e) => setQuestion(e.target.value)}
                 placeholder="예: 요즘 연애운이 궁금해요. 좋은 인연이 있을까요?"
-                rows={4}
+                rows={2}
                 maxLength={500}
-                className="w-full resize-none rounded-xl bg-night-800 border border-gold-500/25 px-4 py-3 text-sm text-gold-100 placeholder:text-mystic-300/40 leading-relaxed focus:outline-none focus:border-gold-400 transition-colors"
+                className="w-full resize-none rounded-xl bg-night-800 border border-gold-500/25 px-3 py-2 text-xs sm:text-sm text-gold-100 placeholder:text-mystic-300/40 leading-snug focus:outline-none focus:border-gold-400 transition-colors"
               />
-              <div className="flex items-center justify-between mt-1.5 mb-4">
-                <div className="flex flex-wrap gap-1.5">
-                  {['연애운', '직업운', '재물운', '오늘의 운세'].map((tag) => (
-                    <button
-                      key={tag}
-                      type="button"
-                      onClick={() => setQuestion(`${tag}이 궁금해요. 앞으로 어떻게 될까요?`)}
-                      className="rounded-full border border-mystic-500/40 bg-mystic-500/10 px-3 py-1 text-xs text-mystic-300 hover:border-gold-400 hover:text-gold-300 transition-colors"
-                    >
-                      {tag}
-                    </button>
-                  ))}
-                </div>
-                <span className="text-[10px] text-mystic-300/50">{question.length}/500</span>
+              <div className="flex items-center justify-between gap-1.5 mt-2 mb-3 overflow-x-auto">
+                {['연애운', '직업운', '재물운', '오늘의 운세'].map((tag) => (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => setQuestion(`${tag}이 궁금해요. 앞으로 어떻게 될까요?`)}
+                    className="flex-1 whitespace-nowrap rounded-full border border-mystic-500/40 bg-mystic-500/10 px-2 py-1 text-[11px] text-mystic-300 hover:border-gold-400 hover:text-gold-300 transition-colors"
+                  >
+                    {tag}
+                  </button>
+                ))}
               </div>
 
               <button
                 type="button"
                 onClick={startShuffle}
                 disabled={!question.trim()}
-                className="w-full flex items-center justify-center gap-2 rounded-xl py-3.5 text-sm font-bold bg-gradient-to-r from-gold-500 to-gold-400 text-night-950 shadow-lg shadow-gold-500/20 disabled:opacity-40 disabled:shadow-none hover:shadow-gold-400/30 hover:brightness-110 transition-all active:scale-[0.98]"
+                className="w-full flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold bg-gradient-to-r from-gold-500 to-gold-400 text-night-950 shadow-lg shadow-gold-500/20 disabled:opacity-40 disabled:shadow-none hover:shadow-gold-400/30 hover:brightness-110 transition-all active:scale-[0.98]"
               >
                 <Shuffle className="w-4 h-4" />
                 카드 셔플하기
@@ -393,7 +394,7 @@ export default function App() {
             </div>
 
             <article className="rounded-2xl gold-border bg-night-900/70 backdrop-blur-sm p-5 sm:p-6">
-              {/* 점술가 프로필 (이미지 제거) */}
+              {/* 점술가 프로필 */}
               <div className="mb-4">
                 <p className="text-[10px] text-gold-400 font-serif tracking-[0.2em]">
                   {reader.nameEn}
