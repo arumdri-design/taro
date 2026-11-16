@@ -30,7 +30,7 @@ export default function TarotCardView({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`tarot-card relative w-full aspect-[2/3.5] rounded-xl transition-all duration-300 focus:outline-none ${
+      className={`tarot-card relative w-full aspect-[2/3] rounded-xl transition-all duration-300 focus:outline-none ${
         onClick && !disabled ? 'cursor-pointer hover:-translate-y-1' : ''
       } ${selected ? 'scale-105' : ''} ${
         disabled && !selected ? 'opacity-30' : ''
