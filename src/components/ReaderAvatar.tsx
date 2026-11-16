@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { readers, type Reader } from '@/data/readers';
 import { lunaImageUrl, kaiImageUrl } from '@/config/readerImages';
 
@@ -25,6 +25,10 @@ export default function ReaderAvatar({
   const reader = readers.find((r) => r.id === readerId);
   const primarySrc = reader?.image || fallbackUrls[readerId];
   const [imgSrc, setImgSrc] = useState(primarySrc);
+
+  useEffect(() => {
+    setImgSrc(primarySrc);
+  }, [primarySrc]);
 
   const handleError = () => {
     const backup = fallbackUrls[readerId];
