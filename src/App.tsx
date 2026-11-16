@@ -16,7 +16,6 @@ import Starfield from '@/components/Starfield';
 import TarotCardView from '@/components/TarotCardView';
 import FanSpread from '@/components/FanSpread';
 import ApiKeyModal from '@/components/ApiKeyModal';
-import ReaderAvatar from '@/components/ReaderAvatar';
 import useAmbientBgm from '@/hooks/useAmbientBgm';
 import { tarotCards } from '@/data/tarotCards';
 import { readers, type Reader } from '@/data/readers';
@@ -132,7 +131,6 @@ export default function App() {
     }
   };
 
-  // 카드 선택 단계용 헤더: 점술가 이미지/프레임 없이 텍스트만 표시하여 세로 공간 절약
   const selectHeader = (title: string, subtitle?: React.ReactNode) => (
     <div className="flex flex-col items-center text-center mb-4 animate-fade-in">
       <p className="text-xs text-gold-400 font-serif tracking-widest">{reader.nameEn}</p>
@@ -193,38 +191,39 @@ export default function App() {
         {/* 1단계: 점술가 선택 + 고민 입력 */}
         {stage === 'question' && (
           <section className="mt-6 animate-fade-in-up">
-            {/* 점술가 큰 이미지 (이미지 아래 이름 제거) */}
-            <div className="flex flex-col items-center text-center mb-4">
-              <div className="w-44 sm:w-52 rounded-2xl p-0.5 bg-gradient-to-br from-gold-300 via-gold-500 to-gold-600 shadow-xl shadow-gold-500/25 mb-3 animate-float">
-                <div className="rounded-2xl overflow-hidden border-2 border-night-900">
-                  <ReaderAvatar
-                    key={reader.id}
-                    readerId={reader.id}
-                    className="w-full aspect-square"
-                  />
-                </div>
-              </div>
-              <p className="text-xs text-mystic-300/90 leading-relaxed max-w-xs">
-                &ldquo;{reader.greeting}&rdquo;
-              </p>
-            </div>
+            {/* 선택된 루나/카이 이미지를 배경으로 사용하는 점술가 선택 영역 */}
+            <div className="relative overflow-hidden rounded-2xl border border-gold-500/35 mb-4 shadow-xl shadow-black/40">
+              <img
+                src={reader.image}
+                alt={`${reader.name} 점술가`}
+                className="absolute inset-0 w-full h-full object-cover object-center transition-all duration-300"
+              />
+              <div className="absolute inset-0 bg-gradient-to-b from-night-950/60 via-night-950/65 to-night-950/85" />
 
-            {/* 점술가 선택 버튼: 이름만 작게 표시 */}
-            <div className="flex items-center justify-center gap-2 mb-5">
-              {readers.map((r) => (
-                <button
-                  key={r.id}
-                  type="button"
-                  onClick={() => setReader(r)}
-                  className={`rounded-full px-4 py-1.5 text-xs font-serif font-bold transition-all border ${
-                    reader.id === r.id
-                      ? 'border-gold-400 bg-gold-500/20 text-gold-200 shadow-sm shadow-gold-500/20'
-                      : 'border-mystic-500/35 bg-night-900/60 text-mystic-300/80 hover:border-gold-500/50 hover:text-gold-200'
-                  }`}
-                >
-                  {r.name}
-                </button>
-              ))}
+              <div className="relative z-10 flex flex-col items-center text-center px-4 py-6">
+                {/* 선택 버튼: 이름만 작게 표시 */}
+                <div className="flex items-center justify-center gap-2 mb-3">
+                  {readers.map((r) => (
+                    <button
+                      key={r.id}
+                      type="button"
+                      onClick={() => setReader(r)}
+                      className={`rounded-full px-4 py-1.5 text-xs font-serif font-bold transition-all border backdrop-blur-sm ${
+                        reader.id === r.id
+                          ? 'border-gold-400 bg-gold-500/25 text-white shadow-sm shadow-gold-500/20'
+                          : 'border-white/30 bg-night-950/50 text-white/80 hover:border-gold-400/70 hover:text-white'
+                      }`}
+                    >
+                      {r.name}
+                    </button>
+                  ))}
+                </div>
+
+                {/* 해석자 문구: 흰색 */}
+                <p className="text-xs sm:text-sm text-white leading-relaxed max-w-xs drop-shadow">
+                  &ldquo;{reader.greeting}&rdquo;
+                </p>
+              </div>
             </div>
 
             <div className="rounded-2xl gold-border bg-night-900/70 backdrop-blur-sm p-4">
@@ -394,28 +393,17 @@ export default function App() {
             </div>
 
             <article className="rounded-2xl gold-border bg-night-900/70 backdrop-blur-sm p-5 sm:p-6">
-              {/* 점술가 프로필 */}
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-14 rounded-xl p-0.5 bg-gradient-to-br from-gold-300 via-gold-500 to-gold-600 shrink-0">
-                  <div className="rounded-xl overflow-hidden border border-night-900">
-                    <ReaderAvatar
-                      key={reader.id}
-                      readerId={reader.id}
-                      className="w-full aspect-square"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <p className="text-[10px] text-gold-400 font-serif tracking-[0.2em]">
-                    {reader.nameEn}
-                  </p>
-                  <p className="text-sm font-bold font-serif text-gold-200">
-                    {reader.name} 점술가
-                  </p>
-                  <p className="text-[10px] text-mystic-300/70 leading-snug mt-0.5">
-                    {reader.trait}
-                  </p>
-                </div>
+              {/* 점술가 프로필 (이미지 제거) */}
+              <div className="mb-4">
+                <p className="text-[10px] text-gold-400 font-serif tracking-[0.2em]">
+                  {reader.nameEn}
+                </p>
+                <p className="text-sm font-bold font-serif text-gold-200">
+                  {reader.name} 점술가
+                </p>
+                <p className="text-[10px] text-white/85 leading-snug mt-0.5">
+                  {reader.trait}
+                </p>
               </div>
 
               <div className="flex items-center gap-2 mb-4">
@@ -423,7 +411,7 @@ export default function App() {
                 <Moon className="w-4 h-4 text-gold-400" />
                 <div className="h-px flex-1 bg-gradient-to-l from-transparent to-gold-500/40" />
               </div>
-              <div className="space-y-4 text-sm text-gold-100/90 leading-[1.8] font-serif whitespace-pre-wrap">
+              <div className="space-y-4 text-sm text-white/95 leading-[1.8] font-serif whitespace-pre-wrap">
                 {reading.split(/(\[[^\]]+\])/g).map((chunk, i) =>
                   chunk.startsWith('[') && chunk.endsWith(']') ? (
                     <p
@@ -471,7 +459,6 @@ export default function App() {
           aria-label="배너 광고"
           className="w-full min-h-[60px] sm:min-h-[90px] rounded-2xl border border-gold-500/25 bg-night-900/75 backdrop-blur-sm flex items-center justify-center overflow-hidden"
         >
-          {/* Google AdSense / 제휴 배너 스크립트 또는 이미지 배너 삽입 위치 */}
           <span className="text-[10px] tracking-widest text-mystic-300/45 select-none">
             AD BANNER
           </span>
