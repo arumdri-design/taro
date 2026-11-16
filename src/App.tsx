@@ -132,20 +132,12 @@ export default function App() {
     }
   };
 
-  const readerHeader = (title: string, subtitle?: React.ReactNode) => (
-    <div className="flex flex-col items-center text-center mb-5 animate-fade-in">
-      <div className="w-24 sm:w-28 rounded-2xl p-0.5 bg-gradient-to-br from-gold-300 via-gold-500 to-gold-600 shadow-lg shadow-gold-500/25 mb-3">
-        <div className="rounded-2xl overflow-hidden border-2 border-night-900">
-          <ReaderAvatar
-            src={reader.image}
-            name={reader.name}
-            className="w-full aspect-square"
-          />
-        </div>
-      </div>
+  // 카드 선택 단계용 헤더: 점술가 이미지/프레임 없이 텍스트만 표시하여 세로 공간 절약
+  const selectHeader = (title: string, subtitle?: React.ReactNode) => (
+    <div className="flex flex-col items-center text-center mb-4 animate-fade-in">
       <p className="text-xs text-gold-400 font-serif tracking-widest">{reader.nameEn}</p>
       <h2 className="font-serif text-lg sm:text-xl font-bold text-gold-200 mt-0.5">{title}</h2>
-      {subtitle && <div className="mt-1.5 text-xs text-mystic-300/80">{subtitle}</div>}
+      {subtitle && <div className="mt-1 text-xs text-mystic-300/80">{subtitle}</div>}
     </div>
   );
 
@@ -164,6 +156,7 @@ export default function App() {
         </div>
         <div className="flex items-center gap-2">
           <button
+            type="button"
             onClick={bgm.toggle}
             className="p-2 rounded-full border border-gold-500/30 text-gold-400 hover:bg-gold-500/10 transition-colors"
             aria-label={bgm.playing ? '배경음악 끄기' : '배경음악 켜기'}
@@ -171,6 +164,7 @@ export default function App() {
             {bgm.playing ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
           </button>
           <button
+            type="button"
             onClick={() => setKeyModalOpen(true)}
             className="p-2 rounded-full border border-gold-500/30 text-gold-400 hover:bg-gold-500/10 transition-colors"
             aria-label="설정"
@@ -183,6 +177,7 @@ export default function App() {
       {!apiKey && (
         <div className="relative z-10 max-w-lg mx-auto px-4 mt-3">
           <button
+            type="button"
             onClick={() => setKeyModalOpen(true)}
             className="w-full flex items-center gap-2 rounded-xl border border-gold-500/40 bg-gold-500/10 px-3 py-2.5 text-left text-xs text-gold-300 hover:bg-gold-500/15 transition-colors"
           >
@@ -195,18 +190,14 @@ export default function App() {
       )}
 
       <main className="relative z-10 max-w-lg mx-auto px-4 pb-16 sm:px-6">
-        {/* 1단계: 점술가 선택 + 고민 입력 */}
+        {/* 1단계: 점술가 선택 + 고민 입력 (점술가 이미지 노출) */}
         {stage === 'question' && (
-          <section className="mt-8 animate-fade-in-up">
+          <section className="mt-6 animate-fade-in-up">
             {/* 점술가 초상화 및 인사말 */}
             <div className="flex flex-col items-center text-center mb-6">
               <div className="w-28 sm:w-32 rounded-2xl p-0.5 bg-gradient-to-br from-gold-300 via-gold-500 to-gold-600 shadow-lg shadow-gold-500/25 mb-3 animate-float">
                 <div className="rounded-2xl overflow-hidden border-2 border-night-900">
-                  <ReaderAvatar
-                    src={reader.image}
-                    name={reader.name}
-                    className="w-full aspect-square"
-                  />
+                  <ReaderAvatar readerId={reader.id} className="w-full aspect-square" />
                 </div>
               </div>
               <p className="text-xs text-gold-400 font-serif tracking-[0.25em]">{reader.nameEn}</p>
@@ -225,25 +216,15 @@ export default function App() {
                   key={r.id}
                   type="button"
                   onClick={() => setReader(r)}
-                  className={`rounded-2xl p-2.5 text-center transition-all border ${
+                  className={`rounded-2xl p-3 text-center transition-all border ${
                     reader.id === r.id
                       ? 'border-gold-400 bg-gold-500/15 shadow-lg shadow-gold-500/20'
                       : 'border-mystic-500/30 bg-night-900/60 hover:border-gold-500/50'
                   }`}
                 >
-                  <div
-                    className={`w-14 mx-auto rounded-full p-0.5 mb-2 ${
-                      reader.id === r.id
-                        ? 'bg-gradient-to-br from-gold-300 to-gold-500'
-                        : 'bg-mystic-500/40'
-                    }`}
-                  >
+                  <div className="w-14 mx-auto rounded-full p-0.5 mb-2 bg-gradient-to-br from-gold-300/70 to-gold-500/70">
                     <div className="rounded-full overflow-hidden">
-                      <ReaderAvatar
-                        src={r.image}
-                        name={r.name}
-                        className="w-full aspect-square"
-                      />
+                      <ReaderAvatar readerId={r.id} className="w-full aspect-square" />
                     </div>
                   </div>
                   <p
@@ -299,9 +280,9 @@ export default function App() {
           </section>
         )}
 
-        {/* 셔플 중 */}
+        {/* 셔플 중 (점술가 이미지 미노출) */}
         {stage === 'shuffle' && (
-          <section className="mt-24 sm:mt-32 flex flex-col items-center animate-fade-in">
+          <section className="mt-20 sm:mt-28 flex flex-col items-center animate-fade-in">
             <div className="flex gap-2 mb-8">
               {[0, 1, 2, 3, 4].map((i) => (
                 <div
@@ -323,10 +304,10 @@ export default function App() {
           </section>
         )}
 
-        {/* 2단계: 카드 선택 */}
+        {/* 2단계: 카드 선택 (점술가 이미지 미노출) */}
         {(stage === 'select' || stage === 'loading') && (
-          <section className="mt-8 animate-fade-in-up">
-            {readerHeader(
+          <section className="mt-5 animate-fade-in-up">
+            {selectHeader(
               `${reader.name}가 세 장의 카드를 기다립니다`,
               <p>
                 순서대로 <span className="text-gold-300">과거</span> ·{' '}
@@ -335,7 +316,7 @@ export default function App() {
               </p>
             )}
 
-            <div className="mt-3 flex items-center justify-center gap-2">
+            <div className="mt-2 flex items-center justify-center gap-2">
               {POSITIONS.map((pos, i) => (
                 <div
                   key={pos}
@@ -358,7 +339,7 @@ export default function App() {
             />
 
             {error && (
-              <div className="mt-5 flex items-start gap-2 rounded-xl border border-rose-400/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
+              <div className="mt-4 flex items-start gap-2 rounded-xl border border-rose-400/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
                 <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
                 <span>{error}</span>
               </div>
@@ -368,7 +349,7 @@ export default function App() {
               type="button"
               onClick={showReading}
               disabled={picked.length < MAX_PICKS}
-              className="mt-6 w-full flex items-center justify-center gap-2 rounded-xl py-3.5 text-sm font-bold bg-gradient-to-r from-gold-500 to-gold-400 text-night-950 shadow-lg shadow-gold-500/20 disabled:opacity-40 disabled:shadow-none hover:brightness-110 transition-all active:scale-[0.98]"
+              className="mt-5 w-full flex items-center justify-center gap-2 rounded-xl py-3.5 text-sm font-bold bg-gradient-to-r from-gold-500 to-gold-400 text-night-950 shadow-lg shadow-gold-500/20 disabled:opacity-40 disabled:shadow-none hover:brightness-110 transition-all active:scale-[0.98]"
             >
               <Sparkles className="w-4 h-4" />
               {picked.length < MAX_PICKS
@@ -378,18 +359,9 @@ export default function App() {
           </section>
         )}
 
-        {/* 로딩 */}
+        {/* 로딩 (점술가 이미지 미노출) */}
         {stage === 'loading' && (
-          <section className="mt-10 flex flex-col items-center animate-fade-in">
-            <div className="w-24 sm:w-28 rounded-2xl p-0.5 bg-gradient-to-br from-gold-300 via-gold-500 to-gold-600 shadow-lg shadow-gold-500/25 mb-6">
-              <div className="rounded-2xl overflow-hidden border-2 border-night-900">
-                <ReaderAvatar
-                  src={reader.image}
-                  name={reader.name}
-                  className="w-full aspect-square"
-                />
-              </div>
-            </div>
+          <section className="mt-8 flex flex-col items-center animate-fade-in">
             <div className="relative w-16 h-16 mb-4">
               <div className="absolute inset-0 rounded-full border-2 border-gold-500/20" />
               <div className="absolute inset-0 rounded-full border-t-2 border-gold-400 animate-spin" />
@@ -407,9 +379,9 @@ export default function App() {
           </section>
         )}
 
-        {/* 4단계: 결과 */}
+        {/* 4단계: 결과 (점술가 이미지 노출) */}
         {stage === 'result' && (
-          <section className="mt-8 animate-fade-in-up">
+          <section className="mt-6 animate-fade-in-up">
             <div className="text-center mb-6">
               <h2 className="font-serif text-xl sm:text-2xl font-bold gold-text">
                 {reader.name}가 전하는 이야기
@@ -438,11 +410,7 @@ export default function App() {
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-14 rounded-xl p-0.5 bg-gradient-to-br from-gold-300 via-gold-500 to-gold-600 shrink-0">
                   <div className="rounded-xl overflow-hidden border border-night-900">
-                    <ReaderAvatar
-                      src={reader.image}
-                      name={reader.name}
-                      className="w-full aspect-square"
-                    />
+                    <ReaderAvatar readerId={reader.id} className="w-full aspect-square" />
                   </div>
                 </div>
                 <div>
