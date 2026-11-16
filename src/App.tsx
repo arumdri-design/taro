@@ -464,10 +464,6 @@ export default function App() {
           </section>
         )}
       </main>
-
-      <footer className="relative z-10 pb-6 text-center text-[10px] text-mystic-300/40">
-        타로는 조언이지 정답이 아닙니다. 당신의 선택이 가장 강력한 카드예요.
-      </footer>
     </div>
   );
 }
