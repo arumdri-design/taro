@@ -464,6 +464,19 @@ export default function App() {
           </section>
         )}
       </main>
+
+      {/* 하단 배너 광고 영역 */}
+      <footer className="relative z-10 max-w-lg mx-auto px-4 pb-6 sm:px-6">
+        <div
+          aria-label="배너 광고"
+          className="w-full min-h-[60px] sm:min-h-[90px] rounded-2xl border border-gold-500/25 bg-night-900/75 backdrop-blur-sm flex items-center justify-center overflow-hidden"
+        >
+          {/* Google AdSense / 제휴 배너 스크립트 또는 이미지 배너 삽입 위치 */}
+          <span className="text-[10px] tracking-widest text-mystic-300/45 select-none">
+            AD BANNER
+          </span>
+        </div>
+      </footer>
     </div>
   );
 }
