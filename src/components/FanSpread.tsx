@@ -11,49 +11,37 @@ interface FanSpreadProps {
   onPick: (index: number) => void;
 }
 
-// 한 화면에 겹쳐서 펼칠 카드 수 (78장을 한 줄에 욱여넣지 않도록 15장 샘플링)
-const MAX_VISIBLE = 15;
-const ARC_SPAN = 64; // 부채꼴 전체 각도 (도)
-const ARC_DROP = 18; // 가장자리 카드가 내려가는 깊이 (px)
+const ARC_SPAN = 48; // 전체 부채꼴 각도 (도)
+const ARC_DROP = 14; // 가장자리 카드가 내려가는 깊이 (px)
 
 export default function FanSpread({ deck, picked, disabled, onPick }: FanSpreadProps) {
   const slots = useMemo(() => {
-    if (!deck.length) return [];
-    const count = Math.min(deck.length, MAX_VISIBLE);
-    const indices: number[] = [];
-
-    if (count === 1) {
-      indices.push(0);
-    } else {
-      for (let i = 0; i < count; i++) {
-        indices.push(Math.round((i * (deck.length - 1)) / (count - 1)));
-      }
-    }
-
-    return indices.map((deckIndex, slot) => ({
+    const count = deck.length; // 78장 전체
+    return deck.map((item, deckIndex) => ({
+      item,
       deckIndex,
-      slot,
+      slot: deckIndex,
       total: count,
     }));
   }, [deck]);
 
   return (
     <div className="mt-4 w-full select-none">
-      {/* 카드 선택 안내 */}
-      <p className="mb-3 text-center text-[11px] text-mystic-300/75">
-        마음이 끌리는 카드 3장을 눌러 선택해 주세요
+      <p className="mb-2 text-center text-[11px] text-mystic-300/75">
+        좌우로 스크롤하며 마음이 끌리는 카드 3장을 눌러 선택해 주세요 ({deck.length}장)
       </p>
 
-      {/* 부채꼴 카드 스프레드 영역 */}
+      {/* 가로 스크롤 가능한 부채꼴 영역 */}
       <div
-        className="relative mx-auto w-full overflow-x-auto overflow-y-visible py-3"
-        style={{ minHeight: 'clamp(220px, 56vw, 290px)' }}
+        className="relative w-full overflow-x-auto overflow-y-visible py-4 scrollbar-thin"
+        style={{ minHeight: 'clamp(225px, 56vw, 290px)' }}
       >
         <div
-          className="relative mx-auto flex items-end justify-center"
+          className="relative flex items-end"
           style={{
-            width: '100%',
-            minWidth: '320px',
+            // 카드 간격을 28px로 둬서 78장 전체를 좌우로 스크롤하며 넉넉히 클릭 가능
+            width: `${Math.max(slots.length * 28 + 90, 320)}px`,
+            minWidth: '100%',
             height: 'clamp(210px, 54vw, 275px)',
           }}
         >
@@ -62,8 +50,7 @@ export default function FanSpread({ deck, picked, disabled, onPick }: FanSpreadP
             const mid = (t - 0.5) * 2; // -1..1
             const angle = mid * (ARC_SPAN / 2);
             const drop = Math.abs(mid) * ARC_DROP;
-            // 중앙 기준으로 가로 간격을 넉넉히 배분해 카드 뒷면이 선처럼 찌그러지지 않게 함
-            const spreadX = mid * 118;
+            const leftPx = slot * 28 + 12;
 
             const pickIdx = picked.indexOf(deckIndex);
             const revealed = pickIdx !== -1;
@@ -72,12 +59,13 @@ export default function FanSpread({ deck, picked, disabled, onPick }: FanSpreadP
             return (
               <div
                 key={`${deckIndex}-${slot}`}
-                className="absolute bottom-3 left-1/2 transition-all duration-300"
+                className="absolute bottom-3 transition-transform duration-200"
                 style={{
-                  width: 'clamp(72px, 19vw, 94px)',
-                  transform: `translateX(calc(-50% + ${spreadX}px)) translateY(${
-                    revealed ? -14 : drop
-                  }px) rotate(${revealed ? 0 : angle}deg)`,
+                  left: `${leftPx}px`,
+                  width: 'clamp(72px, 19vw, 92px)',
+                  transform: `translateY(${revealed ? -16 : drop}px) rotate(${
+                    revealed ? 0 : angle
+                  }deg)`,
                   transformOrigin: 'bottom center',
                   zIndex: revealed ? 60 + pickIdx : 10 + slot,
                 }}
@@ -112,12 +100,6 @@ export default function FanSpread({ deck, picked, disabled, onPick }: FanSpreadP
             );
           })}
         </div>
-
-        {/* 테이블 위 은은한 그림자 */}
-        <div
-          className="pointer-events-none mx-auto -mt-2 h-5 w-4/5 rounded-full bg-black/55 blur-md"
-          aria-hidden
-        />
       </div>
     </div>
   );
