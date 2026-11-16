@@ -7,13 +7,21 @@ const fallbackUrls: Record<Reader['id'], string> = {
   kai: kaiImageUrl || '/readers/kai.png',
 };
 
+interface ReaderAvatarProps {
+  readerId: Reader['id'];
+  className?: string;
+  hidden?: boolean;
+}
+
 export default function ReaderAvatar({
   readerId,
   className = '',
-}: {
-  readerId: Reader['id'];
-  className?: string;
-}) {
+  hidden = false,
+}: ReaderAvatarProps) {
+  if (hidden) {
+    return null;
+  }
+
   const reader = readers.find((r) => r.id === readerId);
   const primarySrc = reader?.image || fallbackUrls[readerId];
   const [imgSrc, setImgSrc] = useState(primarySrc);
