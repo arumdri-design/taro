@@ -2,8 +2,6 @@ import { useMemo } from 'react';
 import type { DrawnCard } from '@/services/gemini';
 import TarotCardView from '@/components/TarotCardView';
 
-const POSITIONS = ['과거', '현재', '미래'] as const;
-
 interface FanSpreadProps {
   deck: DrawnCard[];
   picked: number[];
@@ -20,94 +18,58 @@ export default function FanSpread({ deck, picked, disabled, onPick }: FanSpreadP
     };
   }, [deck]);
 
-  const renderRow = (rows: Array<{ item: DrawnCard; index: number }>, rowOffset: number) => (
-    <div className="flex items-center px-3">
-      {rows.map(({ item, index }, idx) => {
-        const pickIdx = picked.indexOf(index);
-        const revealed = pickIdx !== -1;
-        const isMaxPicked = picked.length >= 3 && !revealed;
+  const renderRow = (rows: Array<{ item: DrawnCard; index: number }>, rowOffset: number) => {
+    const count = rows.length;
+    if (count === 0) return null;
 
-        return (
-          <div
-            key={`${index}-${rowOffset + idx}`}
-            className={`w-16 sm:w-20 shrink-0 transition-transform duration-200 ${
-              idx === 0 ? 'ml-0' : '-ml-7 sm:-ml-8'
-            } ${
-              !disabled && !isMaxPicked && !revealed
-                ? 'hover:-translate-y-2 hover:z-30'
-                : ''
-            }`}
-            style={{
-              zIndex: revealed ? 40 + pickIdx : idx + 1,
-            }}
-          >
-            <TarotCardView
-              card={item.card}
-              reversed={item.reversed}
-              revealed={revealed}
-              selected={revealed}
-              disabled={disabled || isMaxPicked}
-              label={revealed ? POSITIONS[pickIdx] : undefined}
-              index={rowOffset + idx}
+    return (
+      <div className="relative w-full h-24 sm:h-28">
+        {rows.map(({ item, index }, idx) => {
+          const revealed = picked.includes(index);
+          const isMaxPicked = picked.length >= 3 && !revealed;
+          const isLocked = Boolean(disabled || isMaxPicked || revealed);
+
+          // 카드 폭(약 44px~52px)을 제외한 가용 폭(0% ~ 86%) 안에 모든 카드가 한 화면에 들어오도록 배치
+          const leftPercent = count > 1 ? (idx / (count - 1)) * 86 : 43;
+
+          return (
+            <button
+              key={`${index}-${rowOffset + idx}`}
+              type="button"
+              disabled={isLocked}
               onClick={() => onPick(index)}
-            />
-          </div>
-        );
-      })}
-    </div>
-  );
+              style={{
+                left: `${leftPercent}%`,
+                zIndex: revealed ? 1 : idx + 1,
+              }}
+              aria-label={`타로 카드 ${rowOffset + idx + 1}`}
+              className={`absolute top-0 w-11 sm:w-14 transition-all duration-200 focus:outline-none ${
+                revealed
+                  ? 'opacity-0 pointer-events-none scale-75'
+                  : isLocked
+                  ? 'opacity-45 cursor-not-allowed'
+                  : 'hover:-translate-y-2 active:-translate-y-2 cursor-pointer'
+              }`}
+            >
+              <TarotCardView
+                card={item.card}
+                reversed={item.reversed}
+                revealed={false}
+                selected={false}
+                disabled={isLocked}
+                index={rowOffset + idx}
+              />
+            </button>
+          );
+        })}
+      </div>
+    );
+  };
 
   return (
-    <div className="mt-4 w-full select-none">
-      {/* 선택한 카드 3장 전용 표시 영역 */}
-      <div className="mb-4 rounded-2xl border border-gold-500/30 bg-night-900/70 p-3">
-        <div className="mb-2 flex items-center justify-between text-[11px]">
-          <span className="font-serif text-gold-300">선택한 카드</span>
-          <span className="text-mystic-300/70">{picked.length} / 3장</span>
-        </div>
-
-        <div className="grid grid-cols-3 gap-2.5">
-          {POSITIONS.map((pos, slotIdx) => {
-            const deckIndex = picked[slotIdx];
-            const drawn = deckIndex !== undefined ? deck[deckIndex] : undefined;
-
-            return (
-              <div
-                key={pos}
-                className="flex flex-col items-center rounded-xl border border-gold-500/20 bg-night-950/60 p-2"
-              >
-                <span className="mb-1.5 text-[10px] font-serif text-gold-400">{pos}</span>
-
-                {drawn ? (
-                  <div className="w-16 sm:w-20">
-                    <TarotCardView
-                      card={drawn.card}
-                      reversed={drawn.reversed}
-                      revealed={true}
-                      selected={true}
-                      disabled={true}
-                      index={slotIdx}
-                    />
-                  </div>
-                ) : (
-                  <div className="flex aspect-[2/3.5] w-16 sm:w-20 items-center justify-center rounded-xl border border-dashed border-mystic-500/35 bg-night-900/40 text-[10px] text-mystic-300/45">
-                    빈 슬롯
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* 안내 문구 */}
-      <p className="mb-2 text-center text-[11px] text-mystic-300/75">
-        좌우로 스크롤하며 마음이 끌리는 카드 3장을 눌러 선택해 주세요 ({deck.length}장)
-      </p>
-
-      {/* 2줄 겹침 스프레드 영역 */}
-      <div className="w-full overflow-x-auto overflow-y-visible py-3 rounded-2xl border border-gold-500/20 bg-night-950/50">
-        <div className="inline-flex flex-col gap-3 min-w-full">
+    <div className="w-full h-full flex flex-col justify-center select-none overflow-hidden">
+      <div className="w-full rounded-2xl border border-gold-500/20 bg-night-950/50 px-2 py-3 overflow-hidden">
+        <div className="flex flex-col gap-3 w-full">
           {renderRow(topRow, 0)}
           {renderRow(bottomRow, topRow.length)}
         </div>
