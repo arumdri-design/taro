@@ -14,7 +14,158 @@ export interface TarotCard {
   reversed: CardDirectionMeaning;
 }
 
-export const tarotCards: TarotCard[] = [
+type SuitKey = 'wands' | 'cups' | 'swords' | 'pentacles';
+
+const SUIT_META: Record<
+  SuitKey,
+  {
+    nameEn: string;
+    nameKo: string;
+    slug: string;
+    themeKo: string;
+    upKw: string[];
+    revKw: string[];
+  }
+> = {
+  wands: {
+    nameEn: 'Wands',
+    nameKo: '완드',
+    slug: 'wands',
+    themeKo: '열정과 행동, 추진력',
+    upKw: ['열정', '실행', '추진력'],
+    revKw: ['과열', '지연', '소진'],
+  },
+  cups: {
+    nameEn: 'Cups',
+    nameKo: '컵',
+    slug: 'cups',
+    themeKo: '감정과 관계, 공감',
+    upKw: ['감정', '관계', '공감'],
+    revKw: ['동요', '오해', '과민'],
+  },
+  swords: {
+    nameEn: 'Swords',
+    nameKo: '소드',
+    slug: 'swords',
+    themeKo: '생각과 판단, 진실',
+    upKw: ['판단', '명확함', '결단'],
+    revKw: ['갈등', '망설임', '냉소'],
+  },
+  pentacles: {
+    nameEn: 'Pentacles',
+    nameKo: '펜타클',
+    slug: 'pentacles',
+    themeKo: '현실과 결실, 안정',
+    upKw: ['안정', '결실', '현실감'],
+    revKw: ['정체', '집착', '부족'],
+  },
+};
+
+const RANK_META: Record<
+  number,
+  { en: string; ko: string; slug: string; up: string; rev: string }
+> = {
+  1: {
+    en: 'Ace',
+    ko: '에이스',
+    slug: '01',
+    up: '새로운 씨앗과 출발의 에너지가 열립니다.',
+    rev: '시작을 망설이거나 기회를 놓치고 있을 수 있습니다.',
+  },
+  2: {
+    en: 'Two',
+    ko: '2',
+    slug: '02',
+    up: '서로 다른 두 요소의 균형과 선택이 놓여 있습니다.',
+    rev: '결정 장애나 관계의 균열이 생기기 쉽습니다.',
+  },
+  3: {
+    en: 'Three',
+    ko: '3',
+    slug: '03',
+    up: '협력과 확장, 첫 번째 진전이 나타납니다.',
+    rev: '기대보다 속도가 느리거나 호흡이 엇갈릴 수 있습니다.',
+  },
+  4: {
+    en: 'Four',
+    ko: '4',
+    slug: '04',
+    up: '안정적인 기반을 다지고 잠시 숨을 고르는 시기입니다.',
+    rev: '고인 물처럼 정체되거나 답답함을 느낄 수 있습니다.',
+  },
+  5: {
+    en: 'Five',
+    ko: '5',
+    slug: '05',
+    up: '부딪힘과 시련을 통해 진짜 중요한 것이 드러납니다.',
+    rev: '불필요한 다툼을 거두고 회복으로 돌아설 조짐입니다.',
+  },
+  6: {
+    en: 'Six',
+    ko: '6',
+    slug: '06',
+    up: '조화와 나눔, 이전의 노력이 보답으로 이어집니다.',
+    rev: '과거에 매이거나 일방적인 관계가 될 수 있습니다.',
+  },
+  7: {
+    en: 'Seven',
+    ko: '7',
+    slug: '07',
+    up: '스스로의 방향을 점검하며 한 걸음 더 버텨낼 때입니다.',
+    rev: '지쳐서 손을 놓고 싶거나 확신이 흔들릴 수 있습니다.',
+  },
+  8: {
+    en: 'Eight',
+    ko: '8',
+    slug: '08',
+    up: '빠른 전개와 이동, 미련을 두고 떠나는 움직임입니다.',
+    rev: '방향을 잃고 서두르다 실수할 가능성이 있습니다.',
+  },
+  9: {
+    en: 'Nine',
+    ko: '9',
+    slug: '09',
+    up: '경험에서 나온 경계심과 마지막 고비를 넘기는 힘입니다.',
+    rev: '과도한 방어와 불안으로 스스로를 가둘 수 있습니다.',
+  },
+  10: {
+    en: 'Ten',
+    ko: '10',
+    slug: '10',
+    up: '한 사이클의 마무리와 무게를 내려놓는 전환점입니다.',
+    rev: '부담이 과중해져 정리가 늦어지고 있을 수 있습니다.',
+  },
+  11: {
+    en: 'Page',
+    ko: '페이지',
+    slug: '11',
+    up: '호기심 어린 소식과 작은 배움의 시작이 찾아옵니다.',
+    rev: '성급한 말이나 미숙한 태도를 조심해야 합니다.',
+  },
+  12: {
+    en: 'Knight',
+    ko: '나이트',
+    slug: '12',
+    up: '목표를 향해 직접 뛰어들어 움직이는 실행력입니다.',
+    rev: '앞뒤 재지 않고 돌진하다 충돌할 수 있습니다.',
+  },
+  13: {
+    en: 'Queen',
+    ko: '퀸',
+    slug: '13',
+    up: '성숙한 내면의 힘으로 주변을 품고 이끄는 기운입니다.',
+    rev: '감정 기복이나 지나친 간섭이 생길 수 있습니다.',
+  },
+  14: {
+    en: 'King',
+    ko: '킹',
+    slug: '14',
+    up: '책임감과 노련함으로 상황을 안정적으로 통제합니다.',
+    rev: '권위적이 되거나 유연성을 잃기 쉽습니다.',
+  },
+};
+
+const MAJOR_CARDS: TarotCard[] = [
   {
     id: 0,
     name: 'The Fool',
@@ -346,3 +497,36 @@ export const tarotCards: TarotCard[] = [
     },
   },
 ];
+
+function buildMinorCards(): TarotCard[] {
+  const suits: SuitKey[] = ['wands', 'cups', 'swords', 'pentacles'];
+  const cards: TarotCard[] = [];
+  let nextId = 22;
+
+  for (const suit of suits) {
+    const sMeta = SUIT_META[suit];
+    for (let rank = 1; rank <= 14; rank++) {
+      const rMeta = RANK_META[rank];
+      cards.push({
+        id: nextId++,
+        name: `${rMeta.en} of ${sMeta.nameEn}`,
+        nameKo: `${sMeta.nameKo} ${rMeta.ko}`,
+        arcana: 'minor',
+        suit,
+        image: `/images/cards/${sMeta.slug}-${rMeta.slug}.png`,
+        upright: {
+          keywords: [sMeta.upKw[0], rMeta.en === 'Ace' ? '시작' : sMeta.upKw[1], sMeta.upKw[2]],
+          meaning: `${sMeta.themeKo} 영역에서 ${rMeta.up}`,
+        },
+        reversed: {
+          keywords: [sMeta.revKw[0], sMeta.revKw[1], sMeta.revKw[2]],
+          meaning: `${sMeta.themeKo} 영역에서 ${rMeta.rev}`,
+        },
+      });
+    }
+  }
+
+  return cards;
+}
+
+export const tarotCards: TarotCard[] = [...MAJOR_CARDS, ...buildMinorCards()];
