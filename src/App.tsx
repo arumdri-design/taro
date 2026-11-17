@@ -52,6 +52,33 @@ function getCardBriefInfo(card: TarotCard, reversed: boolean) {
   return { keywords, meaning };
 }
 
+function writeTextToClipboard(text: string): Promise<void> {
+  if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+    return navigator.clipboard.writeText(text);
+  }
+
+  return new Promise((resolve, reject) => {
+    try {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.setAttribute('readonly', '');
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      const ok = document.execCommand('copy');
+      document.body.removeChild(textarea);
+      if (ok) {
+        resolve();
+      } else {
+        reject(new Error('execCommand copy failed'));
+      }
+    } catch (err) {
+      reject(err);
+    }
+  });
+}
+
 export default function App() {
   const [stage, setStage] = useState<Stage>('question');
   const [question, setQuestion] = useState('');
@@ -85,6 +112,7 @@ export default function App() {
     [deck, picked]
   );
 
+  // 현재 중앙 확대 미리보기 중인 카드 정보
   const revealingItem = useMemo(() => {
     if (revealingIndex === null) return null;
     const drawn = deck[revealingIndex];
@@ -114,6 +142,7 @@ export default function App() {
     beginShuffle();
   }, [question, bgm, beginShuffle]);
 
+  // 카드 터치 시 중앙 확대·뒤집기 미리보기 상태 진입
   const pickCard = (index: number) => {
     if (
       stage !== 'select' ||
@@ -134,6 +163,7 @@ export default function App() {
     });
   };
 
+  // 확대 오버레이 터치 시 축소 및 선택 카드 확정
   const confirmRevealedCard = () => {
     if (revealingIndex === null) return;
     const targetIdx = revealingIndex;
@@ -164,13 +194,15 @@ export default function App() {
     }
   };
 
+  // 상담 결과 텍스트 클립보드 복사
   const copyResult = async () => {
+    const cardsSummary = revealedCards
+      .map((c) => `${c.card.nameKo}(${c.reversed ? '역방향' : '정방향'})`)
+      .join(', ');
+    const payload = `[밤하늘 사주 운세 상담소 - ${reader.name} 점술가]\n고민: ${question}\n카드: ${cardsSummary}\n\n${reading}`;
+
     try {
-      await navigator.clipboard.writeText(
-        `[밤하늘 사주 운세 상담소 - ${reader.name} 점술가]\n고민: ${question}\n카드: ${revealedCards
-          .map((c) => `${c.card.nameKo}(${c.reversed ? '역방향' : '정방향'})`)
-          .join(', ')}\n\n${reading}`
-      );
+      await writeTextToClipboard(payload);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
@@ -337,7 +369,7 @@ export default function App() {
           </section>
         )}
 
-        {/* 2단계: 카드 선택 (스크롤 없이 한 화면에 고정 배치) */}
+        {/* 2단계: 카드 선택 (스크롤 없이 한 화면 고정 배치) */}
         {stage === 'select' && (
           <section className="flex flex-col justify-between h-full w-full overflow-hidden min-h-0 animate-fade-in-up">
             <div className="flex flex-col items-center text-center mb-1 shrink-0">
@@ -347,7 +379,7 @@ export default function App() {
               </h2>
             </div>
 
-            {/* 스크롤 없이 한 화면에 들어오는 2줄 겹침 덱 영역 */}
+            {/* 2줄 겹침 덱 영역 */}
             <div className="relative flex-1 min-h-0 w-full flex items-center justify-center overflow-hidden my-1">
               <FanSpread
                 deck={deck}
@@ -499,7 +531,7 @@ export default function App() {
         </footer>
       )}
 
-      {/* 카드 선택 시 중앙 확대 뒤집기 + 간단 해석 오버레이 (터치/클릭 시 축소 완료) */}
+      {/* 카드 선택 시 중앙 확대·뒤집기·간단 해석 오버레이 */}
       {revealingItem && (
         <div
           onClick={confirmRevealedCard}
@@ -526,7 +558,6 @@ export default function App() {
             />
           </div>
 
-          {/* 카드 간단 해석 박스 */}
           <div
             className={`w-full max-w-sm shrink-0 rounded-2xl border border-gold-400/40 bg-night-900/90 px-4 py-3 text-center shadow-xl transition-all duration-500 ${
               revealFlipped ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'
