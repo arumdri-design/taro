@@ -10,13 +10,23 @@ interface FanSpreadProps {
 }
 
 export default function FanSpread({ deck, picked, disabled, onPick }: FanSpreadProps) {
+  const validDeck = useMemo(
+    () =>
+      deck
+        .map((item, index) => ({ item, index }))
+        .filter((entry): entry is { item: DrawnCard; index: number } =>
+          Boolean(entry.item && entry.item.card)
+        ),
+    [deck]
+  );
+
   const { topRow, bottomRow } = useMemo(() => {
-    const mid = Math.ceil(deck.length / 2);
+    const mid = Math.ceil(validDeck.length / 2);
     return {
-      topRow: deck.map((item, index) => ({ item, index })).slice(0, mid),
-      bottomRow: deck.map((item, index) => ({ item, index })).slice(mid),
+      topRow: validDeck.slice(0, mid),
+      bottomRow: validDeck.slice(mid),
     };
-  }, [deck]);
+  }, [validDeck]);
 
   const renderRow = (rows: Array<{ item: DrawnCard; index: number }>, rowOffset: number) => {
     const count = rows.length;
