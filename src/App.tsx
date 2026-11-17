@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Moon,
   Shuffle,
@@ -23,23 +23,24 @@ import { getTarotReading, type DrawnCard } from '@/services/gemini';
 
 type Stage = 'question' | 'shuffle' | 'select' | 'loading' | 'result';
 
+const POSITIONS = ['과거', '현재', '미래'] as const;
 const MAX_PICKS = 3;
-const TOTAL_SHOWN = 78;
+const TOTAL_SHOWN = Math.min(78, tarotCards.length);
 const STORAGE_KEY = 'tarot-gemini-key';
 
 function pickRandomCards(count: number): DrawnCard[] {
   const pool = [...tarotCards];
-  const result: DrawnCard[] = [];
+  const picked: DrawnCard[] = [];
   const limit = Math.min(count, pool.length);
 
   for (let i = 0; i < limit; i++) {
     const idx = Math.floor(Math.random() * pool.length);
     const card = pool.splice(idx, 1)[0];
     if (card) {
-      result.push({ card, reversed: Math.random() < 0.4 });
+      picked.push({ card, reversed: Math.random() < 0.4 });
     }
   }
-  return result;
+  return picked;
 }
 
 function getCardBriefInfo(card: TarotCard | undefined, reversed: boolean) {
@@ -100,8 +101,15 @@ export default function App() {
   const revealedCards = useMemo(
     () =>
       picked
-        .map((cardIdx) => deck[cardIdx])
-        .filter((item): item is DrawnCard => Boolean(item && item.card)),
+        .map((cardIdx, posIdx) => {
+          const drawn = deck[cardIdx];
+          if (!drawn || !drawn.card) return null;
+          return {
+            ...drawn,
+            position: POSITIONS[posIdx] ?? '선택 카드',
+          };
+        })
+        .filter((item): item is DrawnCard & { position: string } => Boolean(item)),
     [deck, picked]
   );
 
@@ -112,10 +120,11 @@ export default function App() {
     const brief = getCardBriefInfo(drawn.card, drawn.reversed);
     return {
       ...drawn,
+      position: POSITIONS[picked.length] ?? '선택 카드',
       keywords: brief.keywords,
       meaning: brief.meaning,
     };
-  }, [revealingIndex, deck]);
+  }, [revealingIndex, deck, picked.length]);
 
   const beginShuffle = useCallback(() => {
     setStage('shuffle');
@@ -176,7 +185,7 @@ export default function App() {
     setStage('loading');
     setError('');
     try {
-      const drawn = revealedCards;
+      const drawn = revealedCards.map(({ card, reversed }) => ({ card, reversed }));
       const text = await getTarotReading(
         { question: question.trim(), cards: drawn, reader },
         apiKey
@@ -191,7 +200,7 @@ export default function App() {
 
   const copyResult = async () => {
     const payload = `[밤하늘 타로 상담 - ${reader.name} 점술가]\n고민: ${question}\n카드: ${revealedCards
-      .map((c) => `${c.card.nameKo}(${c.reversed ? '역방향' : '정방향'})`)
+      .map((c) => `${c.position} - ${c.card.nameKo}(${c.reversed ? '역방향' : '정방향'})`)
       .join(', ')}\n\n${reading}`;
 
     try {
@@ -214,6 +223,14 @@ export default function App() {
     }
   };
 
+  const selectHeader = (title: string, subtitle?: React.ReactNode) => (
+    <div className="flex flex-col items-center text-center mb-1 animate-fade-in">
+      <p className="text-[11px] text-gold-400 font-serif tracking-widest">{reader.nameEn}</p>
+      <h2 className="font-serif text-base sm:text-xl font-bold text-gold-200 mt-0.5">{title}</h2>
+      {subtitle && <div className="mt-0.5 text-xs text-mystic-300/80">{subtitle}</div>}
+    </div>
+  );
+
   return (
     <div
       className={`starfield-bg min-h-screen min-h-dvh text-mystic-300 font-sans relative overflow-hidden flex flex-col ${
@@ -223,6 +240,7 @@ export default function App() {
       <Starfield />
       <ApiKeyModal open={keyModalOpen} onClose={() => setKeyModalOpen(false)} onSave={saveKey} />
 
+      {/* 헤더 */}
       <header className="relative z-10 flex items-center justify-between px-4 pt-3 sm:px-6 sm:pt-5 w-full max-w-lg mx-auto shrink-0">
         <div className="flex items-center gap-2">
           <Moon className="w-5 h-5 text-gold-400" />
@@ -278,6 +296,7 @@ export default function App() {
             : 'pb-10 overflow-y-auto'
         }`}
       >
+        {/* 1단계: 점술가 선택 + 고민 입력 */}
         {stage === 'question' && (
           <section className="mt-4 animate-fade-in-up">
             <div className="relative w-full aspect-square overflow-hidden rounded-2xl border border-gold-500/35 mb-4 shadow-xl shadow-black/40">
@@ -353,6 +372,7 @@ export default function App() {
           </section>
         )}
 
+        {/* 셔플 중 */}
         {stage === 'shuffle' && (
           <section className="mt-20 sm:mt-28 flex flex-col items-center animate-fade-in">
             <div className="flex gap-2 mb-8">
@@ -376,15 +396,69 @@ export default function App() {
           </section>
         )}
 
+        {/* 2단계: 카드 선택 (상단 3슬롯 배치 영역 + 하단 덱) */}
         {stage === 'select' && (
           <section className="flex flex-col justify-between h-full w-full overflow-hidden min-h-0 animate-fade-in-up">
-            <div className="flex flex-col items-center text-center mb-1 shrink-0">
-              <p className="text-[11px] text-gold-400 font-serif tracking-widest">{reader.nameEn}</p>
-              <h2 className="font-serif text-base sm:text-xl font-bold text-gold-200 mt-0.5">
-                {reader.name}가 세 장의 카드를 기다립니다
-              </h2>
+            <div className="shrink-0">
+              {selectHeader(
+                `${reader.name}가 세 장의 카드를 기다립니다`,
+                <p>
+                  순서대로 <span className="text-gold-300">과거</span> ·{' '}
+                  <span className="text-gold-300">현재</span> ·{' '}
+                  <span className="text-gold-300">미래</span>의 카드가 됩니다
+                </p>
+              )}
+
+              {/* 선택된 3장의 카드가 배치되는 슬롯 영역 */}
+              <div className="mt-2 grid grid-cols-3 gap-2.5">
+                {POSITIONS.map((pos, i) => {
+                  const selectedIdx = picked[i];
+                  const selectedDrawn =
+                    selectedIdx !== undefined ? deck[selectedIdx] : undefined;
+
+                  return (
+                    <div
+                      key={pos}
+                      className={`rounded-xl border p-2 flex flex-col items-center justify-between transition-all ${
+                        selectedDrawn
+                          ? 'border-gold-400/80 bg-gold-500/15 text-gold-200 shadow-sm shadow-gold-500/10'
+                          : 'border-dashed border-gold-500/35 bg-night-900/50 text-mystic-300/60'
+                      }`}
+                    >
+                      <span className="text-[10px] font-serif font-bold text-gold-300 mb-1">
+                        {pos}
+                      </span>
+
+                      {selectedDrawn ? (
+                        <div className="w-14 sm:w-16">
+                          <TarotCardView
+                            card={selectedDrawn.card}
+                            reversed={selectedDrawn.reversed}
+                            revealed
+                            selected
+                            index={i}
+                          />
+                        </div>
+                      ) : (
+                        <div className="w-14 sm:w-16 aspect-[2/3] rounded-lg border border-gold-500/20 bg-night-950/60 flex items-center justify-center">
+                          <span className="text-[10px] text-mystic-300/40">
+                            {i + 1}번째
+                          </span>
+                        </div>
+                      )}
+
+                      <span className="mt-1 text-[10px] font-medium truncate max-w-full">
+                        {selectedDrawn
+                          ? `${selectedDrawn.card.nameKo} (${selectedDrawn.reversed ? '역' : '정'})`
+                          : '카드 대기'}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
 
+            {/* 스크롤 없이 한 화면에 들어오는 덱 영역 */}
             <div className="relative flex-1 min-h-0 w-full flex items-center justify-center overflow-hidden my-1">
               <FanSpread
                 deck={deck}
@@ -417,6 +491,7 @@ export default function App() {
           </section>
         )}
 
+        {/* 로딩 */}
         {stage === 'loading' && (
           <section className="mt-8 flex flex-col items-center animate-fade-in">
             <div className="relative w-16 h-16 mb-4">
@@ -436,6 +511,7 @@ export default function App() {
           </section>
         )}
 
+        {/* 4단계: 결과 */}
         {stage === 'result' && (
           <section className="mt-6 animate-fade-in-up">
             <div className="text-center mb-6">
@@ -454,6 +530,7 @@ export default function App() {
                     card={drawn.card}
                     reversed={drawn.reversed}
                     revealed
+                    label={drawn.position}
                     index={i}
                   />
                 </div>
@@ -533,6 +610,7 @@ export default function App() {
         </footer>
       )}
 
+      {/* 카드 선택 시 중앙 확대 뒤집기 + 간단 해석 오버레이 */}
       {revealingItem && (
         <div
           onClick={confirmRevealedCard}
@@ -543,8 +621,12 @@ export default function App() {
           }}
           className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-4 bg-black/85 backdrop-blur-sm px-5 py-6 select-none cursor-pointer transition-opacity duration-300"
         >
+          <p className="text-xs font-serif tracking-widest text-gold-300 shrink-0">
+            [{revealingItem.position}] 자리의 카드
+          </p>
+
           <div
-            className={`h-[48dvh] max-h-[420px] min-h-[250px] aspect-[2/3] shrink-0 transition-all duration-500 ease-out ${
+            className={`h-[46dvh] max-h-[400px] min-h-[240px] aspect-[2/3] shrink-0 transition-all duration-500 ease-out ${
               revealFlipped
                 ? 'scale-100 opacity-100 translate-y-0'
                 : 'scale-50 opacity-0 translate-y-10'
@@ -555,6 +637,7 @@ export default function App() {
               reversed={revealingItem.reversed}
               revealed={revealFlipped}
               fit="contain"
+              label={revealingItem.position}
               index={picked.length}
             />
           </div>
@@ -581,7 +664,7 @@ export default function App() {
           </div>
 
           <p className="text-xs text-gold-200/80 animate-pulse shrink-0">
-            화면을 터치하면 선택이 완료됩니다
+            화면을 터치하면 [{revealingItem.position}] 자리에 놓입니다
           </p>
         </div>
       )}
