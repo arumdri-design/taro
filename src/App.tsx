@@ -114,7 +114,7 @@ export default function App() {
     beginShuffle();
   }, [question, bgm, beginShuffle]);
 
-  // 카드 선택 시 즉시 슬롯에 넣지 않고 중앙 확대 뒤집기 연출로 진입
+  // 카드 선택 시 중앙 확대 뒤집기 연출로 진입
   const pickCard = (index: number) => {
     if (
       stage !== 'select' ||
@@ -135,7 +135,7 @@ export default function App() {
     });
   };
 
-  // 확대된 카드를 터치/클릭하면 축소되며 선택한 카드 자리에 배치
+  // 확대된 카드를 터치/클릭하면 축소되며 선택 완료 처리
   const confirmRevealedCard = () => {
     if (revealingIndex === null) return;
     const targetIdx = revealingIndex;
@@ -180,18 +180,10 @@ export default function App() {
     }
   };
 
-  const selectHeader = (title: string, subtitle?: React.ReactNode) => (
-    <div className="flex flex-col items-center text-center mb-1 animate-fade-in">
-      <p className="text-[11px] text-gold-400 font-serif tracking-widest">{reader.nameEn}</p>
-      <h2 className="font-serif text-base sm:text-xl font-bold text-gold-200 mt-0.5">{title}</h2>
-      {subtitle && <div className="mt-0.5 text-xs text-mystic-300/80">{subtitle}</div>}
-    </div>
-  );
-
   return (
     <div
-      className={`starfield-bg min-h-screen min-h-dvh text-mystic-300 font-sans relative overflow-x-hidden flex flex-col ${
-        stage === 'select' ? 'h-dvh overflow-hidden' : ''
+      className={`starfield-bg min-h-screen min-h-dvh text-mystic-300 font-sans relative overflow-hidden flex flex-col ${
+        stage === 'select' ? 'h-dvh' : ''
       }`}
     >
       <Starfield />
@@ -244,7 +236,7 @@ export default function App() {
         className={`relative z-10 w-full max-w-lg mx-auto px-4 sm:px-6 flex-1 ${
           stage === 'select'
             ? 'flex flex-col justify-between overflow-hidden pt-2 pb-3 min-h-0'
-            : 'pb-10'
+            : 'pb-10 overflow-y-auto'
         }`}
       >
         {/* 1단계: 점술가 선택 + 고민 입력 */}
@@ -350,20 +342,21 @@ export default function App() {
         {/* 2단계: 카드 선택 (스크롤 없이 한 화면에 고정 배치) */}
         {stage === 'select' && (
           <section className="flex flex-col justify-between h-full w-full overflow-hidden min-h-0 animate-fade-in-up">
-            <div className="shrink-0">
-              {selectHeader(`${reader.name}가 세 장의 카드를 기다립니다`)}
+            <div className="flex flex-col items-center text-center mb-1 shrink-0">
+              <p className="text-[11px] text-gold-400 font-serif tracking-widest">{reader.nameEn}</p>
+              <h2 className="font-serif text-base sm:text-xl font-bold text-gold-200 mt-0.5">
+                {reader.name}가 세 장의 카드를 기다립니다
+              </h2>
             </div>
 
-            {/* 스크롤 없이 한 화면에 들어오는 부채꼴/겹침 덱 영역 */}
+            {/* 스크롤 없이 한 화면에 들어오는 2줄 겹침 덱 영역 */}
             <div className="relative flex-1 min-h-0 w-full flex items-center justify-center overflow-hidden my-1">
-              <div className="w-full max-w-full flex items-center justify-center overflow-hidden">
-                <FanSpread
-                  deck={deck}
-                  picked={picked}
-                  disabled={revealingIndex !== null}
-                  onPick={pickCard}
-                />
-              </div>
+              <FanSpread
+                deck={deck}
+                picked={picked}
+                disabled={revealingIndex !== null}
+                onPick={pickCard}
+              />
             </div>
 
             <div className="shrink-0">
@@ -508,7 +501,7 @@ export default function App() {
         </footer>
       )}
 
-      {/* 카드 선택 시 중앙 확대 뒤집기 + 간단 해석 오버레이 (터치/클릭 시 슬롯에 축소 배치) */}
+      {/* 카드 선택 시 중앙 확대 뒤집기 + 간단 해석 오버레이 (터치/클릭 시 축소 완료) */}
       {revealingItem && (
         <div
           onClick={confirmRevealedCard}
@@ -563,7 +556,7 @@ export default function App() {
             </div>
 
             <p className="mt-3 text-xs text-gold-200/80 animate-pulse">
-              화면을 터치하면 카드가 자리에 놓입니다
+              화면을 터치하면 선택이 완료됩니다
             </p>
           </div>
         </div>
