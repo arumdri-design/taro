@@ -6,92 +6,85 @@ export interface DrawnCard {
   reversed: boolean;
 }
 
-export interface ReadingInput {
+interface ReadingRequest {
   question: string;
   cards: DrawnCard[];
   reader: Reader;
 }
 
-const API_URL =
-  'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
+const POSITIONS = ['과거', '현재', '미래'] as const;
 
 export async function getTarotReading(
-  input: ReadingInput,
+  { question, cards, reader }: ReadingRequest,
   apiKey: string
 ): Promise<string> {
-  const cardDescription = input.cards
-    .map((drawn, index) => {
-      const positions = ['과거', '현재', '미래'];
-      const position = positions[index];
-      const direction = drawn.reversed ? '역방향' : '정방향';
-      return `${position}: ${drawn.card.nameKo} (${drawn.card.name}) - ${direction}, 키워드: ${drawn.card.keywords.join(', ')}`;
-    })
-    .join('\n');
-
-  const prompt = `당신은 타로 해석을 제공하는 AI입니다. 아래의 점술가 캐릭터 설정을 완벽하게 연기하며, 그 캐릭터가 된 것처럼 해석해 주세요.
-
-[점술가 캐릭터 설정 - 반드시 이 설정대로 말투와 태도를 유지할 것]
-${input.reader.persona}
-이름: ${input.reader.name}
-
-[상담자의 고민]
-${input.question}
-
-[뽑힌 카드]
-${cardDescription}
-
-[작성 지침]
-- 반드시 한국어로 작성할 것
-- 점술가 캐릭터의 이름과 성격을 유지한 채, 그 캐릭터만의 말투와 어조로 해석할 것
-- 세 장의 카드를 과거-현재-미래의 흐름으로 자연스럽게 연결지어 해석할 것
-- 정방향과 역방향의 의미를 구분하여 해석할 것
-- 마지막에 상담자에게 전하는 따뜻한 조언과 격려를 담을 것
-- 소제목을 활용해 다음 구조로 작성할 것: "카드의 흐름" (전체 요약), 과거/현재/미래 각각의 해석, "전하는 마음" (조언과 격려)
-- 마크다운 별표(**)나 특수 기호는 사용하지 말고, 소제목은 [소제목] 형태로만 구분할 것
-- 너무 길지 않게, 읽기 편한 문단으로 나눌 것`;
-
-  const body = {
-    contents: [
-      {
-        parts: [{ text: prompt }],
-      },
-    ],
-    generationConfig: {
-      temperature: 0.8,
-      maxOutputTokens: 2048,
-    },
-  };
-
-  let response: Response;
-  try {
-    response = await fetch(`${API_URL}?key=${encodeURIComponent(apiKey)}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-  } catch {
-    throw new Error('네트워크에 연결할 수 없어요. 잠시 후 다시 시도해 주세요.');
+  const cleanKey = apiKey.trim();
+  if (!cleanKey) {
+    throw new Error('Gemini API 키가 비어 있습니다. 키를 다시 입력해 주세요.');
   }
 
+  const cardSummary = cards
+    .map(
+      (c, idx) =>
+        `${POSITIONS[idx]}: ${c.card.nameKo} (${c.card.nameEn}) - ${
+          c.reversed ? '역방향' : '정방향'
+        }`
+    )
+    .join('\n');
+
+  const prompt = `당신은 타로 점술가 "${reader.name}"입니다.
+성격과 말투: ${reader.promptStyle || reader.trait}
+
+사용자 고민: "${question}"
+
+뽑힌 3장의 카드:
+${cardSummary}
+
+위 세 장의 카드를 바탕으로 [카드 총평], [과거의 흐름], [현재의 상황], [미래의 조언] 소제목을 대괄호([ ])로 구분하여 따뜻하고 깊이 있게 해석해 주세요.`;
+
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(
+    cleanKey
+  )}`;
+
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      contents: [
+        {
+          parts: [{ text: prompt }],
+        },
+      ],
+    }),
+  });
+
   if (!response.ok) {
-    if (response.status === 400 || response.status === 401 || response.status === 403) {
-      throw new Error('API 키가 올바르지 않아요. 키를 다시 확인해 주세요.');
+    let detail = '';
+    try {
+      const errJson = await response.json();
+      detail = errJson?.error?.message || '';
+    } catch {
+      // ignore json parse error
+    }
+
+    if (response.status === 400 || response.status === 403) {
+      throw new Error(`API 키가 올바르지 않거나 권한이 없습니다. (${detail || response.status})`);
     }
     if (response.status === 429) {
-      throw new Error('요청이 너무 많아요. 잠시 후 다시 시도해 주세요.');
+      throw new Error(`API 호출 한도를 초과했습니다. 잠시 후 다시 시도해 주세요. (${detail})`);
     }
-    throw new Error('별들의 목소리를 듣지 못했어요. 잠시 후 다시 시도해 주세요.');
+    throw new Error(
+      `별들의 목소리를 듣지 못했어요. (${response.status}${detail ? `: ${detail}` : ''})`
+    );
   }
 
   const data = await response.json();
-
-  const text: string | undefined = data?.candidates?.[0]?.content?.parts
-    ?.map((part: { text?: string }) => part.text ?? '')
-    .join('')
-    .trim();
+  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
 
   if (!text) {
-    throw new Error('해석 결과를 받지 못했어요. 다시 시도해 주세요.');
+    throw new Error('해석 결과를 받아오지 못했습니다. 다시 시도해 주세요.');
   }
 
   return text;
