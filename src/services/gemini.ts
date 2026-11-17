@@ -13,12 +13,7 @@ interface ReadingRequest {
 }
 
 const POSITIONS = ['과거', '현재', '미래'] as const;
-const PER_REQUEST_TIMEOUT_MS = 6000;
-const TOTAL_BUDGET_MS = 14000;
-
-function sleep(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
+const PER_REQUEST_TIMEOUT_MS = 8000;
 
 function extractInteractionText(data: Record<string, unknown>): string {
   if (typeof data.output_text === 'string' && data.output_text.trim()) {
@@ -95,150 +90,74 @@ async function callInteractions(
   model: string,
   prompt: string,
   cleanKey: string
-): Promise<{ ok: true; text: string } | { ok: false; reason: string; fatal?: boolean }> {
-  try {
-    const response = await fetchWithTimeout(
-      'https://generativelanguage.googleapis.com/v1beta/interactions',
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-goog-api-key': cleanKey,
-        },
-        body: JSON.stringify({ model, input: prompt }),
+): Promise<{ ok: true; text: string } | { ok: false; status: number; detail: string }> {
+  const response = await fetchWithTimeout(
+    'https://generativelanguage.googleapis.com/v1beta/interactions',
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': cleanKey,
       },
-      PER_REQUEST_TIMEOUT_MS
-    );
+      body: JSON.stringify({ model, input: prompt }),
+    },
+    PER_REQUEST_TIMEOUT_MS
+  );
 
-    if (response.ok) {
-      const data = (await response.json()) as Record<string, unknown>;
-      const text = extractInteractionText(data);
-      return text ? { ok: true, text } : { ok: false, reason: '빈응답' };
-    }
-
-    let detail = '';
-    try {
-      const errJson = await response.json();
-      detail = errJson?.error?.message || '';
-    } catch {
-      // ignore
-    }
-
-    if (response.status === 400 || response.status === 403) {
-      return {
-        ok: false,
-        reason: `API 키가 올바르지 않거나 권한이 없습니다. (${detail || response.status})`,
-        fatal: true,
-      };
-    }
-
-    return { ok: false, reason: `${response.status}` };
-  } catch (err) {
-    if (err instanceof DOMException && err.name === 'AbortError') {
-      return { ok: false, reason: '시간초과' };
-    }
-    return { ok: false, reason: '네트워크오류' };
+  if (response.ok) {
+    const data = (await response.json()) as Record<string, unknown>;
+    const text = extractInteractionText(data);
+    return text ? { ok: true, text } : { ok: false, status: 200, detail: '빈 응답' };
   }
+
+  let detail = '';
+  try {
+    const errJson = await response.json();
+    detail = errJson?.error?.message || '';
+  } catch {
+    // ignore
+  }
+
+  return { ok: false, status: response.status, detail };
 }
 
 async function callGenerateContent(
   model: string,
   prompt: string,
   cleanKey: string
-): Promise<{ ok: true; text: string } | { ok: false; reason: string; fatal?: boolean }> {
-  try {
-    const cleanModel = model.replace(/^models\//, '');
-    const response = await fetchWithTimeout(
-      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
-        cleanModel
-      )}:generateContent`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-goog-api-key': cleanKey,
-        },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-        }),
+): Promise<{ ok: true; text: string } | { ok: false; status: number; detail: string }> {
+  const response = await fetchWithTimeout(
+    `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
+      model
+    )}:generateContent`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': cleanKey,
       },
-      PER_REQUEST_TIMEOUT_MS
-    );
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+      }),
+    },
+    PER_REQUEST_TIMEOUT_MS
+  );
 
-    if (response.ok) {
-      const data = (await response.json()) as Record<string, unknown>;
-      const text = extractGenerateContentText(data);
-      return text ? { ok: true, text } : { ok: false, reason: '빈응답' };
-    }
-
-    let detail = '';
-    try {
-      const errJson = await response.json();
-      detail = errJson?.error?.message || '';
-    } catch {
-      // ignore
-    }
-
-    if (response.status === 400 || response.status === 403) {
-      return {
-        ok: false,
-        reason: `API 키가 올바르지 않거나 권한이 없습니다. (${detail || response.status})`,
-        fatal: true,
-      };
-    }
-
-    return { ok: false, reason: `${response.status}` };
-  } catch (err) {
-    if (err instanceof DOMException && err.name === 'AbortError') {
-      return { ok: false, reason: '시간초과' };
-    }
-    return { ok: false, reason: '네트워크오류' };
+  if (response.ok) {
+    const data = (await response.json()) as Record<string, unknown>;
+    const text = extractGenerateContentText(data);
+    return text ? { ok: true, text } : { ok: false, status: 200, detail: '빈 응답' };
   }
-}
 
-// 현재 API 키로 실제 호출 가능한 Flash 모델 목록 자동 조회
-async function fetchAvailableFlashModels(cleanKey: string): Promise<string[]> {
+  let detail = '';
   try {
-    const response = await fetchWithTimeout(
-      'https://generativelanguage.googleapis.com/v1beta/models',
-      {
-        method: 'GET',
-        headers: {
-          'x-goog-api-key': cleanKey,
-        },
-      },
-      4000
-    );
-
-    if (!response.ok) return [];
-
-    const data = (await response.json()) as {
-      models?: Array<{
-        name?: string;
-        supportedGenerationMethods?: string[];
-      }>;
-    };
-
-    const models = Array.isArray(data.models) ? data.models : [];
-
-    return models
-      .filter((m) => {
-        const name = (m.name || '').toLowerCase();
-        const methods = m.supportedGenerationMethods || [];
-        return (
-          name.includes('flash') &&
-          !name.includes('thinking') &&
-          !name.includes('audio') &&
-          !name.includes('image') &&
-          methods.includes('generateContent')
-        );
-      })
-      .map((m) => (m.name || '').replace(/^models\//, ''))
-      .filter(Boolean)
-      .sort((a, b) => b.localeCompare(a)); // 최신 버전 번호가 먼저 오도록 정렬
+    const errJson = await response.json();
+    detail = errJson?.error?.message || '';
   } catch {
-    return [];
+    // ignore
   }
+
+  return { ok: false, status: response.status, detail };
 }
 
 export async function getTarotReading(
@@ -269,35 +188,34 @@ ${cardSummary}
 
 위 세 장의 카드를 바탕으로 [카드 총평], [과거의 흐름], [현재의 상황], [미래의 조언] 소제목을 대괄호([ ])로 구분하여 따뜻하고 깊이 있게 해석해 주세요.`;
 
-  const startedAt = Date.now();
-  const logs: string[] = [];
+  try {
+    // 1순위: gemini-3.8-flash (Interactions API)
+    const primary = await callInteractions('gemini-3.8-flash', prompt, cleanKey);
+    if (primary.ok) return primary.text;
 
-  // 1순위: gemini-3.8-flash (Interactions API)
-  const primary = await callInteractions('gemini-3.8-flash', prompt, cleanKey);
-  if (primary.ok) return primary.text;
-  if (primary.fatal) throw new Error(primary.reason);
-  logs.push(`gemini-3.8-flash(${primary.reason})`);
+    if (primary.status === 400 || primary.status === 403) {
+      throw new Error(
+        `API 키가 올바르지 않거나 권한이 없습니다. (${primary.detail || primary.status})`
+      );
+    }
 
-  // 2순위: 현재 API 키에서 실제 사용 가능한 Flash 모델 목록 조회 후 순차 시도
-  const availableModels = await fetchAvailableFlashModels(cleanKey);
+    // 2순위: gemini-flash-latest (generateContent, 1회만 대체 호출)
+    const fallback = await callGenerateContent('gemini-flash-latest', prompt, cleanKey);
+    if (fallback.ok) return fallback.text;
 
-  if (availableModels.length === 0) {
-    await sleep(800);
-    const retryPrimary = await callInteractions('gemini-3.8-flash', prompt, cleanKey);
-    if (retryPrimary.ok) return retryPrimary.text;
-    logs.push(`재시도(${retryPrimary.reason})`);
+    if (primary.status === 429 || fallback.status === 429) {
+      throw new Error(
+        '잠시 요청이 몰려 무료 호출 한도에 도달했어요. 1분 정도 뒤에 다시 시도해 주세요.'
+      );
+    }
+
+    throw new Error(
+      `별들의 목소리를 듣지 못했어요. 잠시 후 다시 시도해 주세요. (${primary.status}/${fallback.status})`
+    );
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      throw new Error('응답이 지연되고 있어요. 잠시 후 다시 시도해 주세요.');
+    }
+    throw error;
   }
-
-  for (const model of availableModels) {
-    if (Date.now() - startedAt > TOTAL_BUDGET_MS) break;
-
-    const res = await callGenerateContent(model, prompt, cleanKey);
-    if (res.ok) return res.text;
-    if (res.fatal) throw new Error(res.reason);
-    logs.push(`${model}(${res.reason})`);
-  }
-
-  throw new Error(
-    `별들의 목소리를 듣지 못했어요. 잠시 후 다시 시도해 주세요. [${logs.join(', ')}]`
-  );
 }
