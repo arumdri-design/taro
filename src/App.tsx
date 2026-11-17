@@ -114,7 +114,7 @@ export default function App() {
     beginShuffle();
   }, [question, bgm, beginShuffle]);
 
-  // 카드 선택 시 중앙 확대 뒤집기 연출로 진입
+  // 카드 선택 시 즉시 확정하지 않고 화면 중앙 확대 뒤집기 연출로 진입
   const pickCard = (index: number) => {
     if (
       stage !== 'select' ||
@@ -135,7 +135,7 @@ export default function App() {
     });
   };
 
-  // 확대된 카드를 터치/클릭하면 축소되며 선택 완료 처리
+  // 확대된 카드를 터치/클릭하면 축소되며 선택 완료
   const confirmRevealedCard = () => {
     if (revealingIndex === null) return;
     const targetIdx = revealingIndex;
@@ -510,50 +510,6 @@ export default function App() {
           onKeyDown={(e) => {
             if (e.key === 'Enter' || e.key === ' ') confirmRevealedCard();
           }}
-          className="fixed inset-0 z-50 flex flex-col items-center justify-between bg-black/85 backdrop-blur-sm px-5 py-6 select-none cursor-pointer transition-opacity duration-300 overflow-y-auto"
-        >
-          <div className="h-2 shrink-0" />
-
-          {/* 세로 영역을 넉넉히 확보해 카드 이미지가 잘리지 않도록 구성 */}
-          <div
-            className={`w-52 sm:w-60 h-[46dvh] max-h-[420px] min-h-[260px] shrink-0 flex items-center justify-center transition-all duration-500 ease-out ${
-              revealFlipped
-                ? 'scale-100 opacity-100 translate-y-0'
-                : 'scale-50 opacity-0 translate-y-12'
-            }`}
-          >
-            <div className="w-full h-full flex items-center justify-center [&>*]:h-full [&>*]:w-auto [&>*]:max-w-full">
-              <TarotCardView
-                card={revealingItem.card}
-                reversed={revealingItem.reversed}
-                revealed={revealFlipped}
-                index={picked.length}
-              />
-            </div>
-          </div>
-
-          {/* 카드 간단 해석 박스 */}
-          <div className="w-full max-w-sm shrink-0 flex flex-col items-center">
-            <div
-              className={`w-full rounded-2xl border border-gold-400/40 bg-night-900/90 px-4 py-3 text-center shadow-xl transition-all duration-500 ${
-                revealFlipped ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'
-              }`}
-            >
-              <div className="flex items-center justify-center gap-2 text-xs font-serif text-gold-300">
-                <span>{revealingItem.card.nameKo}</span>
-                <span className="rounded-full border border-gold-400/40 bg-gold-500/15 px-2 py-0.5 text-[10px]">
-                  {revealingItem.reversed ? '역방향' : '정방향'}
-                </span>
-              </div>
-{/* 카드 선택 시 중앙 확대 뒤집기 + 간단 해석 오버레이 (터치/클릭 시 축소 완료) */}
-      {revealingItem && (
-        <div
-          onClick={confirmRevealedCard}
-          role="button"
-          tabIndex={0}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') confirmRevealedCard();
-          }}
           className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-4 bg-black/85 backdrop-blur-sm px-5 py-6 select-none cursor-pointer transition-opacity duration-300"
         >
           {/* 카드 세로 높이 기준으로 너비가 자동 계산되어 상하단이 잘리지 않음 */}
@@ -598,17 +554,6 @@ export default function App() {
           <p className="text-xs text-gold-200/80 animate-pulse shrink-0">
             화면을 터치하면 선택이 완료됩니다
           </p>
-        </div>
-      )}
-              <p className="mt-1.5 text-xs sm:text-sm text-white/95 leading-relaxed font-serif">
-                {revealingItem.meaning}
-              </p>
-            </div>
-
-            <p className="mt-3 text-xs text-gold-200/80 animate-pulse">
-              화면을 터치하면 선택이 완료됩니다
-            </p>
-          </div>
         </div>
       )}
     </div>
