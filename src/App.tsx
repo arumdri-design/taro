@@ -23,7 +23,6 @@ import { getTarotReading, type DrawnCard } from '@/services/gemini';
 
 type Stage = 'question' | 'shuffle' | 'select' | 'loading' | 'result';
 
-const POSITIONS = ['과거', '현재', '미래'] as const;
 const MAX_PICKS = 3;
 const TOTAL_SHOWN = 78;
 
@@ -40,31 +39,17 @@ function pickRandomCards(count: number): DrawnCard[] {
   return picked;
 }
 
-// tarotCards의 필드명이 조금 달라도 안전하게 간단 해석을 꺼내는 헬퍼
-function getCardBriefMeaning(card: TarotCard, reversed: boolean): string {
-  const rec = card as unknown as Record<string, unknown>;
-  const directional = reversed
-    ? rec.reversedMeaning ?? rec.reversed ?? rec.reversedDesc ?? rec.meaningReversed
-    : rec.uprightMeaning ?? rec.upright ?? rec.uprightDesc ?? rec.meaningUpright;
+function getCardBriefInfo(card: TarotCard, reversed: boolean) {
+  const directionData = reversed ? card.reversed : card.upright;
+  const keywords =
+    directionData?.keywords?.slice(0, 3).join(' · ') ||
+    card.keywords?.slice(0, 3).join(' · ') ||
+    '';
+  const meaning =
+    directionData?.meaning ||
+    '새로운 흐름과 내면의 신호가 교차하는 시점입니다.';
 
-  if (typeof directional === 'string' && directional.trim()) {
-    return directional.trim();
-  }
-  if (Array.isArray(directional) && directional.length > 0) {
-    return directional.slice(0, 3).join(' · ');
-  }
-
-  const fallback = rec.keywords ?? rec.description ?? rec.summary ?? rec.meaning;
-  if (typeof fallback === 'string' && fallback.trim()) {
-    return fallback.trim();
-  }
-  if (Array.isArray(fallback) && fallback.length > 0) {
-    return fallback.slice(0, 3).join(' · ');
-  }
-
-  return reversed
-    ? '내면의 신호를 살피고 흐름을 조율해야 할 시점입니다.'
-    : '새로운 에너지와 긍정적인 전환의 기운이 열리고 있습니다.';
+  return { keywords, meaning };
 }
 
 export default function App() {
@@ -96,11 +81,7 @@ export default function App() {
   };
 
   const revealedCards = useMemo(
-    () =>
-      picked.map((cardIdx, posIdx) => ({
-        ...deck[cardIdx],
-        position: POSITIONS[posIdx],
-      })),
+    () => picked.map((cardIdx) => deck[cardIdx]),
     [deck, picked]
   );
 
@@ -108,12 +89,13 @@ export default function App() {
     if (revealingIndex === null) return null;
     const drawn = deck[revealingIndex];
     if (!drawn) return null;
+    const brief = getCardBriefInfo(drawn.card, drawn.reversed);
     return {
       ...drawn,
-      position: POSITIONS[picked.length] ?? '선택 카드',
-      brief: getCardBriefMeaning(drawn.card, drawn.reversed),
+      keywords: brief.keywords,
+      meaning: brief.meaning,
     };
-  }, [revealingIndex, deck, picked.length]);
+  }, [revealingIndex, deck]);
 
   const beginShuffle = useCallback(() => {
     setStage('shuffle');
@@ -188,7 +170,7 @@ export default function App() {
     try {
       await navigator.clipboard.writeText(
         `[밤하늘 타로 상담 - ${reader.name} 점술가]\n고민: ${question}\n카드: ${revealedCards
-          .map((c) => `${c.position} - ${c.card.nameKo}(${c.reversed ? '역방향' : '정방향'})`)
+          .map((c) => `${c.card.nameKo}(${c.reversed ? '역방향' : '정방향'})`)
           .join(', ')}\n\n${reading}`
       );
       setCopied(true);
@@ -199,7 +181,7 @@ export default function App() {
   };
 
   const selectHeader = (title: string, subtitle?: React.ReactNode) => (
-    <div className="flex flex-col items-center text-center mb-2 animate-fade-in">
+    <div className="flex flex-col items-center text-center mb-1 animate-fade-in">
       <p className="text-[11px] text-gold-400 font-serif tracking-widest">{reader.nameEn}</p>
       <h2 className="font-serif text-base sm:text-xl font-bold text-gold-200 mt-0.5">{title}</h2>
       {subtitle && <div className="mt-0.5 text-xs text-mystic-300/80">{subtitle}</div>}
@@ -207,7 +189,11 @@ export default function App() {
   );
 
   return (
-    <div className="starfield-bg min-h-screen min-h-dvh text-mystic-300 font-sans relative overflow-x-hidden flex flex-col">
+    <div
+      className={`starfield-bg min-h-screen min-h-dvh text-mystic-300 font-sans relative overflow-x-hidden flex flex-col ${
+        stage === 'select' ? 'h-dvh overflow-hidden' : ''
+      }`}
+    >
       <Starfield />
       <ApiKeyModal open={keyModalOpen} onClose={() => setKeyModalOpen(false)} onSave={saveKey} />
 
@@ -257,14 +243,13 @@ export default function App() {
       <main
         className={`relative z-10 w-full max-w-lg mx-auto px-4 sm:px-6 flex-1 ${
           stage === 'select'
-            ? 'flex flex-col justify-between overflow-hidden pt-2 pb-3'
+            ? 'flex flex-col justify-between overflow-hidden pt-2 pb-3 min-h-0'
             : 'pb-10'
         }`}
       >
         {/* 1단계: 점술가 선택 + 고민 입력 */}
         {stage === 'question' && (
           <section className="mt-4 animate-fade-in-up">
-            {/* 1:1 비율 점술가 선택 영역 (해석자 문구 -> 선택 버튼 순서로 하단 배치) */}
             <div className="relative w-full aspect-square overflow-hidden rounded-2xl border border-gold-500/35 mb-4 shadow-xl shadow-black/40">
               <img
                 src={reader.image}
@@ -274,12 +259,10 @@ export default function App() {
               <div className="absolute inset-0 bg-gradient-to-b from-transparent via-night-950/20 to-night-950/80" />
 
               <div className="relative z-10 flex flex-col justify-end h-full p-4 text-center">
-                {/* 선택 버튼 바로 위쪽 해석자 문구 */}
                 <p className="mb-3 text-xs sm:text-sm text-white leading-relaxed max-w-xs mx-auto drop-shadow-[0_1px_4px_rgba(0,0,0,0.85)]">
                   &ldquo;{reader.greeting}&rdquo;
                 </p>
 
-                {/* 가장 밑쪽 루나/카이 선택 버튼 */}
                 <div className="flex items-center justify-center gap-2 pb-1">
                   {readers.map((r) => (
                     <button
@@ -299,7 +282,6 @@ export default function App() {
               </div>
             </div>
 
-            {/* 고민 입력 영역 (높이 절반 축소 + 태그 한 줄 출력) */}
             <div className="rounded-2xl gold-border bg-night-900/70 backdrop-blur-sm p-3">
               <div className="flex items-center justify-between mb-1.5">
                 <label className="block text-xs text-gold-400 font-serif">
@@ -367,43 +349,9 @@ export default function App() {
 
         {/* 2단계: 카드 선택 (스크롤 없이 한 화면에 고정 배치) */}
         {stage === 'select' && (
-          <section className="flex flex-col justify-between h-full w-full overflow-hidden animate-fade-in-up">
+          <section className="flex flex-col justify-between h-full w-full overflow-hidden min-h-0 animate-fade-in-up">
             <div className="shrink-0">
-              {selectHeader(
-                `${reader.name}가 세 장의 카드를 기다립니다`,
-                <p>
-                  순서대로 <span className="text-gold-300">과거</span> ·{' '}
-                  <span className="text-gold-300">현재</span> ·{' '}
-                  <span className="text-gold-300">미래</span>의 카드가 됩니다
-                </p>
-              )}
-
-              {/* 선택 슬롯 3개 */}
-              <div className="mt-2 grid grid-cols-3 gap-2">
-                {POSITIONS.map((pos, i) => {
-                  const selectedIdx = picked[i];
-                  const selectedDrawn =
-                    selectedIdx !== undefined ? deck[selectedIdx] : undefined;
-
-                  return (
-                    <div
-                      key={pos}
-                      className={`flex flex-col items-center justify-center rounded-xl border px-2 py-1.5 transition-all ${
-                        selectedDrawn
-                          ? 'border-gold-400/80 bg-gold-500/15 text-gold-200'
-                          : 'border-mystic-500/35 bg-night-900/50 text-mystic-300/60'
-                      }`}
-                    >
-                      <span className="text-[10px] font-serif text-gold-300/90">{pos}</span>
-                      <span className="mt-0.5 text-[11px] font-medium truncate max-w-full">
-                        {selectedDrawn
-                          ? `${selectedDrawn.card.nameKo} (${selectedDrawn.reversed ? '역' : '정'})`
-                          : '카드 선택'}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
+              {selectHeader(`${reader.name}가 세 장의 카드를 기다립니다`)}
             </div>
 
             {/* 스크롤 없이 한 화면에 들어오는 부채꼴/겹침 덱 영역 */}
@@ -480,7 +428,6 @@ export default function App() {
                     card={drawn.card}
                     reversed={drawn.reversed}
                     revealed
-                    label={drawn.position}
                     index={i}
                   />
                 </div>
@@ -488,7 +435,6 @@ export default function App() {
             </div>
 
             <article className="rounded-2xl gold-border bg-night-900/70 backdrop-blur-sm p-5 sm:p-6">
-              {/* 점술가 프로필 */}
               <div className="mb-4">
                 <p className="text-[10px] text-gold-400 font-serif tracking-[0.2em]">
                   {reader.nameEn}
@@ -548,7 +494,7 @@ export default function App() {
         )}
       </main>
 
-      {/* 하단 배너 광고 영역 (카드 선택 화면에서는 스크롤 방지를 위해 숨김/축소) */}
+      {/* 하단 배너 광고 영역 */}
       {stage !== 'select' && (
         <footer className="relative z-10 w-full max-w-lg mx-auto px-4 pb-6 sm:px-6 shrink-0">
           <div
@@ -571,48 +517,55 @@ export default function App() {
           onKeyDown={(e) => {
             if (e.key === 'Enter' || e.key === ' ') confirmRevealedCard();
           }}
-          className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm px-5 py-6 select-none cursor-pointer transition-opacity duration-300"
+          className="fixed inset-0 z-50 flex flex-col items-center justify-between bg-black/85 backdrop-blur-sm px-5 py-6 select-none cursor-pointer transition-opacity duration-300 overflow-y-auto"
         >
-          <p className="mb-3 text-xs font-serif tracking-widest text-gold-300">
-            [{revealingItem.position}] 자리의 카드
-          </p>
+          <div className="h-2 shrink-0" />
 
+          {/* 세로 영역을 넉넉히 확보해 카드 이미지가 잘리지 않도록 구성 */}
           <div
-            className={`w-48 sm:w-56 transition-all duration-500 ease-out ${
+            className={`w-52 sm:w-60 h-[46dvh] max-h-[420px] min-h-[260px] shrink-0 flex items-center justify-center transition-all duration-500 ease-out ${
               revealFlipped
                 ? 'scale-100 opacity-100 translate-y-0'
                 : 'scale-50 opacity-0 translate-y-12'
             }`}
           >
-            <TarotCardView
-              card={revealingItem.card}
-              reversed={revealingItem.reversed}
-              revealed={revealFlipped}
-              label={revealingItem.position}
-              index={picked.length}
-            />
+            <div className="w-full h-full flex items-center justify-center [&>*]:h-full [&>*]:w-auto [&>*]:max-w-full">
+              <TarotCardView
+                card={revealingItem.card}
+                reversed={revealingItem.reversed}
+                revealed={revealFlipped}
+                index={picked.length}
+              />
+            </div>
           </div>
 
           {/* 카드 간단 해석 박스 */}
-          <div
-            className={`mt-4 w-full max-w-sm rounded-2xl border border-gold-400/40 bg-night-900/90 px-4 py-3 text-center shadow-xl transition-all duration-500 ${
-              revealFlipped ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'
-            }`}
-          >
-            <div className="flex items-center justify-center gap-2 text-xs font-serif text-gold-300">
-              <span>{revealingItem.card.nameKo}</span>
-              <span className="rounded-full border border-gold-400/40 bg-gold-500/15 px-2 py-0.5 text-[10px]">
-                {revealingItem.reversed ? '역방향' : '정방향'}
-              </span>
+          <div className="w-full max-w-sm shrink-0 flex flex-col items-center">
+            <div
+              className={`w-full rounded-2xl border border-gold-400/40 bg-night-900/90 px-4 py-3 text-center shadow-xl transition-all duration-500 ${
+                revealFlipped ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'
+              }`}
+            >
+              <div className="flex items-center justify-center gap-2 text-xs font-serif text-gold-300">
+                <span>{revealingItem.card.nameKo}</span>
+                <span className="rounded-full border border-gold-400/40 bg-gold-500/15 px-2 py-0.5 text-[10px]">
+                  {revealingItem.reversed ? '역방향' : '정방향'}
+                </span>
+              </div>
+              {revealingItem.keywords && (
+                <p className="mt-1 text-[11px] text-gold-200/80">
+                  #{revealingItem.keywords.replace(/\s·\s/g, ' #')}
+                </p>
+              )}
+              <p className="mt-1.5 text-xs sm:text-sm text-white/95 leading-relaxed font-serif">
+                {revealingItem.meaning}
+              </p>
             </div>
-            <p className="mt-1.5 text-xs sm:text-sm text-white/95 leading-relaxed font-serif">
-              {revealingItem.brief}
+
+            <p className="mt-3 text-xs text-gold-200/80 animate-pulse">
+              화면을 터치하면 카드가 자리에 놓입니다
             </p>
           </div>
-
-          <p className="mt-4 text-xs text-gold-200/80 animate-pulse">
-            화면을 터치하면 [{revealingItem.position}] 자리에 놓입니다
-          </p>
         </div>
       )}
     </div>
