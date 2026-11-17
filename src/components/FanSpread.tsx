@@ -28,8 +28,6 @@ export default function FanSpread({ deck, picked, disabled, onPick }: FanSpreadP
           const revealed = picked.includes(index);
           const isMaxPicked = picked.length >= 3 && !revealed;
           const isLocked = Boolean(disabled || isMaxPicked || revealed);
-
-          // 카드 폭(약 44px~52px)을 제외한 가용 폭(0% ~ 86%) 안에 모든 카드가 한 화면에 들어오도록 배치
           const leftPercent = count > 1 ? (idx / (count - 1)) * 86 : 43;
 
           return (
