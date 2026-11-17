@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { CARD_BACK_IMAGE, type TarotCard } from '@/data/tarotCards';
+import type { TarotCard } from '@/data/tarotCards';
 
 interface TarotCardViewProps {
   card: TarotCard;
@@ -13,6 +13,8 @@ interface TarotCardViewProps {
   fit?: 'cover' | 'contain';
 }
 
+const DEFAULT_CARD_BACK = '/images/card-back.png';
+
 export default function TarotCardView({
   card,
   reversed,
@@ -24,21 +26,21 @@ export default function TarotCardView({
   index = 0,
   fit = 'cover',
 }: TarotCardViewProps) {
-  const [backSrc, setBackSrc] = useState(CARD_BACK_IMAGE);
-  const [frontSrc, setFrontSrc] = useState(card.image);
+  const [backSrc, setBackSrc] = useState(DEFAULT_CARD_BACK);
+  const [frontSrc, setFrontSrc] = useState(card.image || DEFAULT_CARD_BACK);
 
   useEffect(() => {
-    setFrontSrc(card.image);
+    setFrontSrc(card.image || DEFAULT_CARD_BACK);
   }, [card.image]);
 
   const imgFitClass =
     fit === 'contain' ? 'object-contain p-1 bg-night-950' : 'object-cover';
 
+  const Wrapper = onClick ? 'button' : 'div';
+
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
+    <Wrapper
+      {...(onClick ? { type: 'button' as const, onClick, disabled } : {})}
       className={`tarot-card relative w-full aspect-[2/3] rounded-xl transition-all duration-300 focus:outline-none ${
         onClick && !disabled ? 'cursor-pointer hover:-translate-y-1' : ''
       } ${selected ? 'scale-105' : ''} ${
@@ -61,8 +63,8 @@ export default function TarotCardView({
             src={backSrc}
             alt="타로 카드 뒷면"
             onError={() => {
-              if (backSrc !== '/images/card-back.png') {
-                setBackSrc('/images/card-back.png');
+              if (backSrc !== DEFAULT_CARD_BACK) {
+                setBackSrc(DEFAULT_CARD_BACK);
               }
             }}
             className="w-full h-full object-cover block select-none"
@@ -70,7 +72,7 @@ export default function TarotCardView({
           />
         </div>
 
-        {/* 앞면 (뒤집힌 상태) */}
+        {/* 앞면 */}
         {revealed && (
           <div
             className="absolute inset-0 rounded-xl overflow-hidden border border-gold-400/60 shadow-xl bg-night-950"
@@ -80,11 +82,11 @@ export default function TarotCardView({
               src={frontSrc}
               alt={`${card.nameKo} (${card.name})`}
               onError={() => {
-                const paddedNum = String(card.number).padStart(2, '0');
+                const paddedNum = String(card.number ?? 0).padStart(2, '0');
                 const fallback =
                   card.arcana === 'major'
                     ? `/cards/major-${paddedNum}.png`
-                    : `/cards/${card.suit}-${paddedNum}.png`;
+                    : `/cards/${card.suit ?? 'wands'}-${paddedNum}.png`;
                 if (frontSrc !== fallback) {
                   setFrontSrc(fallback);
                 }
@@ -124,6 +126,6 @@ export default function TarotCardView({
       {selected && (
         <div className="absolute -inset-0.5 rounded-xl ring-2 ring-gold-400 pointer-events-none" />
       )}
-    </button>
+    </Wrapper>
   );
 }
