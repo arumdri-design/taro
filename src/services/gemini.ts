@@ -13,7 +13,7 @@ interface ReadingRequest {
 }
 
 const POSITIONS = ['과거', '현재', '미래'] as const;
-const PER_REQUEST_TIMEOUT_MS = 8000;
+const PER_REQUEST_TIMEOUT_MS = 7000;
 
 function extractInteractionText(data: Record<string, unknown>): string {
   if (typeof data.output_text === 'string' && data.output_text.trim()) {
@@ -160,19 +160,78 @@ async function callGenerateContent(
   return { ok: false, status: response.status, detail };
 }
 
+function getDirectionInfo(card: TarotCard, reversed: boolean) {
+  const dir = reversed ? card.reversed : card.upright;
+  const keywords =
+    dir?.keywords?.slice(0, 3).join(', ') ||
+    card.keywords?.slice(0, 3).join(', ') ||
+    '전환, 흐름';
+  const meaning =
+    dir?.meaning ||
+    '새로운 국면과 내면의 신호가 함께 움직이는 시점입니다.';
+  return { keywords, meaning };
+}
+
+// 점술가 캐릭터(reader) 성향에 따라 도입·마무리 톤을 달리하는 로컬 폴백 해석기
+function buildLocalFallbackReading({ question, cards, reader }: ReadingRequest): string {
+  const [past, present, future] = cards;
+
+  const pastInfo = getDirectionInfo(past.card, past.reversed);
+  const presentInfo = getDirectionInfo(present.card, present.reversed);
+  const futureInfo = getDirectionInfo(future.card, future.reversed);
+
+  const isKai =
+    reader.id?.toLowerCase().includes('kai') ||
+    reader.name?.includes('카이');
+
+  const introLine = isKai
+    ? `밤공기가 가라앉은 자리에서 "${question}"에 대한 세 장의 흐름을 차분히 읽어보았어. 감정에 휩쓸리기보다 카드가 가리키는 핵심부터 짚어보자.`
+    : `조용한 밤하늘 아래 "${question}"라는 마음을 품고 골라주신 세 장의 카드를 가만히 들여다보았어요. 카드들이 건네는 이야기를 함께 들어볼까요?`;
+
+  const pastDir = past.reversed ? '역방향' : '정방향';
+  const presentDir = present.reversed ? '역방향' : '정방향';
+  const futureDir = future.reversed ? '역방향' : '정방향';
+
+  const pastBody = isKai
+    ? `지난 흐름에서는 [${past.card.nameKo}(${pastDir})] 카드가 자리 잡았어. 핵심 키워드는 (${pastInfo.keywords})이고, ${pastInfo.meaning} 지금까지 쌓여온 경험과 선택이 지금의 출발선을 만들었어.`
+    : `지나온 자리에는 [${past.card.nameKo}(${pastDir})] 카드가 놓여 있어요. (${pastInfo.keywords})라는 기운 속에서, ${pastInfo.meaning} 그 시간들이 있었기에 지금의 고민도 깊어졌을 거예요.`;
+
+  const presentBody = isKai
+    ? `지금 네가 서 있는 자리는 [${present.card.nameKo}(${presentDir})]가 보여주고 있어. (${presentInfo.keywords})와 맞닿아 있는데, ${presentInfo.meaning} 지금은 상황을 정확히 파악하고 중심을 잡는 것이 우선이야.`
+    : `현재의 마음을 비추는 카드는 [${present.card.nameKo}(${presentDir})]예요. (${presentInfo.keywords})의 결이 느껴지며, ${presentInfo.meaning} 스스로에게 조금 더 다정한 시선을 보내도 괜찮아요.`;
+
+  const futureBody = isKai
+    ? `앞으로의 방향은 [${future.card.nameKo}(${futureDir})] 쪽으로 열려 있어. (${futureInfo.keywords})를 기억해 둬. ${futureInfo.meaning} 네가 내리는 작은 선택 하나가 다음 장면을 바꿀 거야.`
+    : `다가올 흐름은 [${future.card.nameKo}(${futureDir})] 카드가 조용히 밝혀주고 있어요. (${futureInfo.keywords})의 빛을 따라가 보세요. ${futureInfo.meaning} 서두르지 않아도 괜찮으니 마음이 이끄는 쪽을 믿어보세요.`;
+
+  const outroLine = isKai
+    ? `답은 이미 네 안에 있어. 오늘 나온 세 카드의 키워드(${pastInfo.keywords.split(',')[0]}, ${presentInfo.keywords.split(',')[0]}, ${futureInfo.keywords.split(',')[0]})를 떠올리며 한 걸음씩 움직여 봐.`
+    : `오늘 뽑힌 카드들이 당신의 밤에 작은 등불이 되었으면 해요. 언제든 마음이 무거워질 때 다시 별빛 아래에서 이야기 나누어요.`;
+
+  return [
+    `[카드 총평]\n${introLine}\n\n${outroLine}`,
+    `[과거의 흐름]\n${pastBody}`,
+    `[현재의 상황]\n${presentBody}`,
+    `[미래의 조언]\n${futureBody}`,
+  ].join('\n\n');
+}
+
 export async function getTarotReading(
-  { question, cards, reader }: ReadingRequest,
+  req: ReadingRequest,
   apiKey: string
 ): Promise<string> {
+  const { question, cards, reader } = req;
   const cleanKey = apiKey.trim();
+
+  // API 키가 없으면 즉시 로컬 폴백 해석 제공
   if (!cleanKey) {
-    throw new Error('Gemini API 키가 비어 있습니다. 키를 다시 입력해 주세요.');
+    return buildLocalFallbackReading(req);
   }
 
   const cardSummary = cards
     .map(
       (c, idx) =>
-        `${POSITIONS[idx]}: ${c.card.nameKo} (${c.card.nameEn}) - ${
+        `${POSITIONS[idx]}: ${c.card.nameKo} (${c.nameEn ?? c.card.name}) - ${
           c.reversed ? '역방향' : '정방향'
         }`
     )
@@ -193,29 +252,14 @@ ${cardSummary}
     const primary = await callInteractions('gemini-3.8-flash', prompt, cleanKey);
     if (primary.ok) return primary.text;
 
-    if (primary.status === 400 || primary.status === 403) {
-      throw new Error(
-        `API 키가 올바르지 않거나 권한이 없습니다. (${primary.detail || primary.status})`
-      );
-    }
-
     // 2순위: gemini-flash-latest (generateContent, 1회만 대체 호출)
     const fallback = await callGenerateContent('gemini-flash-latest', prompt, cleanKey);
     if (fallback.ok) return fallback.text;
 
-    if (primary.status === 429 || fallback.status === 429) {
-      throw new Error(
-        '잠시 요청이 몰려 무료 호출 한도에 도달했어요. 1분 정도 뒤에 다시 시도해 주세요.'
-      );
-    }
-
-    throw new Error(
-      `별들의 목소리를 듣지 못했어요. 잠시 후 다시 시도해 주세요. (${primary.status}/${fallback.status})`
-    );
-  } catch (error) {
-    if (error instanceof DOMException && error.name === 'AbortError') {
-      throw new Error('응답이 지연되고 있어요. 잠시 후 다시 시도해 주세요.');
-    }
-    throw error;
+    // 429/503/빈응답 등 외부 API 실패 시 로컬 폴백으로 즉시 전환
+    return buildLocalFallbackReading(req);
+  } catch {
+    // 네트워크 오류나 타임아웃 발생 시에도 멈추지 않고 로컬 폴백으로 전환
+    return buildLocalFallbackReading(req);
   }
 }
