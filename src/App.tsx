@@ -84,7 +84,7 @@ export default function App() {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) setManualKey(saved);
     } catch {
-      // 사파리/인앱 브라우저 스토리지 제한 무시
+      // 스토리지 접근 제한 무시
     }
   }, []);
 
@@ -93,7 +93,7 @@ export default function App() {
     try {
       localStorage.setItem(STORAGE_KEY, key);
     } catch {
-      // 무시
+      // 스토리지 접근 제한 무시
     }
   };
 
@@ -101,7 +101,7 @@ export default function App() {
     () =>
       picked
         .map((cardIdx) => deck[cardIdx])
-        .filter((item): item is DrawnCard => Boolean(item)),
+        .filter((item): item is DrawnCard => Boolean(item && item.card)),
     [deck, picked]
   );
 
