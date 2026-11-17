@@ -13,6 +13,36 @@ interface ReadingRequest {
 }
 
 const POSITIONS = ['과거', '현재', '미래'] as const;
+const MODEL = 'gemini-3.8-flash';
+
+function extractInteractionText(data: Record<string, unknown>): string {
+  if (typeof data.output_text === 'string' && data.output_text.trim()) {
+    return data.output_text;
+  }
+
+  const outputs = Array.isArray(data.outputs) ? data.outputs : [];
+  const chunks: string[] = [];
+
+  for (const item of outputs) {
+    if (!item || typeof item !== 'object') continue;
+    const record = item as Record<string, unknown>;
+    if (typeof record.text === 'string' && record.text.trim()) {
+      chunks.push(record.text);
+    }
+    if (Array.isArray(record.content)) {
+      for (const part of record.content) {
+        if (part && typeof part === 'object') {
+          const partRecord = part as Record<string, unknown>;
+          if (typeof partRecord.text === 'string' && partRecord.text.trim()) {
+            chunks.push(partRecord.text);
+          }
+        }
+      }
+    }
+  }
+
+  return chunks.join('\n').trim();
+}
 
 export async function getTarotReading(
   { question, cards, reader }: ReadingRequest,
@@ -42,21 +72,17 @@ ${cardSummary}
 
 위 세 장의 카드를 바탕으로 [카드 총평], [과거의 흐름], [현재의 상황], [미래의 조언] 소제목을 대괄호([ ])로 구분하여 따뜻하고 깊이 있게 해석해 주세요.`;
 
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(
-    cleanKey
-  )}`;
+  const endpoint = 'https://generativelanguage.googleapis.com/v1beta/interactions';
 
   const response = await fetch(endpoint, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      'x-goog-api-key': cleanKey,
     },
     body: JSON.stringify({
-      contents: [
-        {
-          parts: [{ text: prompt }],
-        },
-      ],
+      model: MODEL,
+      input: prompt,
     }),
   });
 
@@ -80,8 +106,8 @@ ${cardSummary}
     );
   }
 
-  const data = await response.json();
-  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+  const data = (await response.json()) as Record<string, unknown>;
+  const text = extractInteractionText(data);
 
   if (!text) {
     throw new Error('해석 결과를 받아오지 못했습니다. 다시 시도해 주세요.');
