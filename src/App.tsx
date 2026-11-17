@@ -545,11 +545,61 @@ export default function App() {
                   {revealingItem.reversed ? '역방향' : '정방향'}
                 </span>
               </div>
-              {revealingItem.keywords && (
-                <p className="mt-1 text-[11px] text-gold-200/80">
-                  #{revealingItem.keywords.replace(/\s·\s/g, ' #')}
-                </p>
-              )}
+{/* 카드 선택 시 중앙 확대 뒤집기 + 간단 해석 오버레이 (터치/클릭 시 축소 완료) */}
+      {revealingItem && (
+        <div
+          onClick={confirmRevealedCard}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') confirmRevealedCard();
+          }}
+          className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-4 bg-black/85 backdrop-blur-sm px-5 py-6 select-none cursor-pointer transition-opacity duration-300"
+        >
+          {/* 카드 세로 높이 기준으로 너비가 자동 계산되어 상하단이 잘리지 않음 */}
+          <div
+            className={`h-[48dvh] max-h-[420px] min-h-[250px] aspect-[2/3] shrink-0 transition-all duration-500 ease-out ${
+              revealFlipped
+                ? 'scale-100 opacity-100 translate-y-0'
+                : 'scale-50 opacity-0 translate-y-10'
+            }`}
+          >
+            <TarotCardView
+              card={revealingItem.card}
+              reversed={revealingItem.reversed}
+              revealed={revealFlipped}
+              fit="contain"
+              index={picked.length}
+            />
+          </div>
+
+          {/* 카드 간단 해석 박스 */}
+          <div
+            className={`w-full max-w-sm shrink-0 rounded-2xl border border-gold-400/40 bg-night-900/90 px-4 py-3 text-center shadow-xl transition-all duration-500 ${
+              revealFlipped ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'
+            }`}
+          >
+            <div className="flex items-center justify-center gap-2 text-xs font-serif text-gold-300">
+              <span>{revealingItem.card.nameKo}</span>
+              <span className="rounded-full border border-gold-400/40 bg-gold-500/15 px-2 py-0.5 text-[10px]">
+                {revealingItem.reversed ? '역방향' : '정방향'}
+              </span>
+            </div>
+            {revealingItem.keywords && (
+              <p className="mt-1 text-[11px] text-gold-200/80">
+                #{revealingItem.keywords.replace(/\s·\s/g, ' #')}
+              </p>
+            )}
+            <p className="mt-1.5 text-xs sm:text-sm text-white/95 leading-relaxed font-serif">
+              {revealingItem.meaning}
+            </p>
+          </div>
+
+          <p className="text-xs text-gold-200/80 animate-pulse shrink-0">
+            화면을 터치하면 선택이 완료됩니다
+          </p>
+        </div>
+      )}
               <p className="mt-1.5 text-xs sm:text-sm text-white/95 leading-relaxed font-serif">
                 {revealingItem.meaning}
               </p>
