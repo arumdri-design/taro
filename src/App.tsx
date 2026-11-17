@@ -114,7 +114,6 @@ export default function App() {
     beginShuffle();
   }, [question, bgm, beginShuffle]);
 
-  // 카드 선택 시 즉시 확정하지 않고 화면 중앙 확대 뒤집기 연출로 진입
   const pickCard = (index: number) => {
     if (
       stage !== 'select' ||
@@ -135,7 +134,6 @@ export default function App() {
     });
   };
 
-  // 확대된 카드를 터치/클릭하면 축소되며 선택 완료
   const confirmRevealedCard = () => {
     if (revealingIndex === null) return;
     const targetIdx = revealingIndex;
@@ -169,7 +167,7 @@ export default function App() {
   const copyResult = async () => {
     try {
       await navigator.clipboard.writeText(
-        `[밤하늘 타로 상담 - ${reader.name} 점술가]\n고민: ${question}\n카드: ${revealedCards
+        `[밤하늘 사주 운세 상담소 - ${reader.name} 점술가]\n고민: ${question}\n카드: ${revealedCards
           .map((c) => `${c.card.nameKo}(${c.reversed ? '역방향' : '정방향'})`)
           .join(', ')}\n\n${reading}`
       );
@@ -512,7 +510,6 @@ export default function App() {
           }}
           className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-4 bg-black/85 backdrop-blur-sm px-5 py-6 select-none cursor-pointer transition-opacity duration-300"
         >
-          {/* 카드 세로 높이 기준으로 너비가 자동 계산되어 상하단이 잘리지 않음 */}
           <div
             className={`h-[48dvh] max-h-[420px] min-h-[250px] aspect-[2/3] shrink-0 transition-all duration-500 ease-out ${
               revealFlipped
