@@ -14,6 +14,11 @@ interface ReadingRequest {
 
 const POSITIONS = ['과거', '현재', '미래'] as const;
 const MODEL = 'gemini-3.8-flash';
+const MAX_RETRIES = 3;
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 function extractInteractionText(data: Record<string, unknown>): string {
   if (typeof data.output_text === 'string' && data.output_text.trim()) {
@@ -74,25 +79,41 @@ ${cardSummary}
 
   const endpoint = 'https://generativelanguage.googleapis.com/v1beta/interactions';
 
-  const response = await fetch(endpoint, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-goog-api-key': cleanKey,
-    },
-    body: JSON.stringify({
-      model: MODEL,
-      input: prompt,
-    }),
-  });
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': cleanKey,
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        input: prompt,
+      }),
+    });
 
-  if (!response.ok) {
+    if (response.ok) {
+      const data = (await response.json()) as Record<string, unknown>;
+      const text = extractInteractionText(data);
+
+      if (!text) {
+        throw new Error('해석 결과를 받아오지 못했습니다. 다시 시도해 주세요.');
+      }
+      return text;
+    }
+
     let detail = '';
     try {
       const errJson = await response.json();
       detail = errJson?.error?.message || '';
     } catch {
       // ignore json parse error
+    }
+
+    // 503(서버 폭주) 또는 429(일시적 한도)는 잠시 대기 후 재시도
+    if ((response.status === 503 || response.status === 429) && attempt < MAX_RETRIES) {
+      await sleep(1500 * Math.pow(2, attempt));
+      continue;
     }
 
     if (response.status === 400 || response.status === 403) {
@@ -106,12 +127,5 @@ ${cardSummary}
     );
   }
 
-  const data = (await response.json()) as Record<string, unknown>;
-  const text = extractInteractionText(data);
-
-  if (!text) {
-    throw new Error('해석 결과를 받아오지 못했습니다. 다시 시도해 주세요.');
-  }
-
-  return text;
+  throw new Error('별들의 목소리를 듣지 못했어요. 잠시 후 다시 시도해 주세요.');
 }
