@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { CARD_BACK_IMAGE, type TarotCard } from '@/data/tarotCards';
 
 interface TarotCardViewProps {
@@ -10,6 +10,7 @@ interface TarotCardViewProps {
   disabled?: boolean;
   label?: string;
   index?: number;
+  fit?: 'cover' | 'contain';
 }
 
 export default function TarotCardView({
@@ -21,9 +22,17 @@ export default function TarotCardView({
   disabled,
   label,
   index = 0,
+  fit = 'cover',
 }: TarotCardViewProps) {
   const [backSrc, setBackSrc] = useState(CARD_BACK_IMAGE);
   const [frontSrc, setFrontSrc] = useState(card.image);
+
+  useEffect(() => {
+    setFrontSrc(card.image);
+  }, [card.image]);
+
+  const imgFitClass =
+    fit === 'contain' ? 'object-contain p-1 bg-night-950' : 'object-cover';
 
   return (
     <button
@@ -46,7 +55,7 @@ export default function TarotCardView({
         className="tarot-card-inner relative w-full h-full transition-transform duration-500"
         style={{ transform: revealed ? 'rotateY(180deg)' : 'rotateY(0deg)' }}
       >
-        {/* 뒷면 (아직 안 보임) */}
+        {/* 뒷면 */}
         <div className="tarot-card-face absolute inset-0 rounded-xl overflow-hidden border border-gold-500/40 shadow-lg shadow-black/50 bg-night-900">
           <img
             src={backSrc}
@@ -61,7 +70,7 @@ export default function TarotCardView({
           />
         </div>
 
-        {/* 앞면 (뒤집힌 상태) - 라이더-웨이트 정통 일러스트 */}
+        {/* 앞면 (뒤집힌 상태) */}
         {revealed && (
           <div
             className="absolute inset-0 rounded-xl overflow-hidden border border-gold-400/60 shadow-xl bg-night-950"
@@ -80,7 +89,7 @@ export default function TarotCardView({
                   setFrontSrc(fallback);
                 }
               }}
-              className={`w-full h-full object-cover block select-none transition-transform duration-500 ${
+              className={`w-full h-full ${imgFitClass} block select-none transition-transform duration-500 ${
                 reversed ? 'rotate-180' : ''
               }`}
               draggable={false}
