@@ -28,10 +28,12 @@ export default function TarotCardView({
 }: TarotCardViewProps) {
   const [backSrc, setBackSrc] = useState(DEFAULT_CARD_BACK);
   const [frontSrc, setFrontSrc] = useState(card.image || DEFAULT_CARD_BACK);
+  const [imgFailed, setImgFailed] = useState(false);
 
   useEffect(() => {
     setFrontSrc(card.image || DEFAULT_CARD_BACK);
-  }, [card.image]);
+    setImgFailed(false);
+  }, [card.image, card.id]);
 
   const imgFitClass =
     fit === 'contain' ? 'object-contain p-1 bg-night-950' : 'object-cover';
@@ -46,7 +48,7 @@ export default function TarotCardView({
       } ${selected ? 'scale-105' : ''} ${
         disabled && !selected ? 'opacity-30' : ''
       }`}
-      style={{ animationDelay: `${index * 20}ms` }}
+      style={{ animationDelay: `${index * 20}ms`, perspective: '1000px' }}
       aria-label={
         revealed
           ? `${card.nameKo} (${reversed ? '역방향' : '정방향'})`
@@ -55,10 +57,16 @@ export default function TarotCardView({
     >
       <div
         className="tarot-card-inner relative w-full h-full transition-transform duration-500"
-        style={{ transform: revealed ? 'rotateY(180deg)' : 'rotateY(0deg)' }}
+        style={{
+          transformStyle: 'preserve-3d',
+          transform: revealed ? 'rotateY(180deg)' : 'rotateY(0deg)',
+        }}
       >
         {/* 뒷면 */}
-        <div className="tarot-card-face absolute inset-0 rounded-xl overflow-hidden border border-gold-500/40 shadow-lg shadow-black/50 bg-night-900">
+        <div
+          className="tarot-card-face absolute inset-0 rounded-xl overflow-hidden border border-gold-500/40 shadow-lg shadow-black/50 bg-night-900"
+          style={{ backfaceVisibility: 'hidden' }}
+        >
           <img
             src={backSrc}
             alt="타로 카드 뒷면"
@@ -75,27 +83,50 @@ export default function TarotCardView({
         {/* 앞면 */}
         {revealed && (
           <div
-            className="absolute inset-0 rounded-xl overflow-hidden border border-gold-400/60 shadow-xl bg-night-950"
-            style={{ transform: 'rotateY(180deg)' }}
+            className="absolute inset-0 rounded-xl overflow-hidden border border-gold-400/60 shadow-xl bg-night-950 flex flex-col justify-between"
+            style={{
+              backfaceVisibility: 'hidden',
+              transform: 'rotateY(180deg)',
+            }}
           >
-            <img
-              src={frontSrc}
-              alt={`${card.nameKo} (${card.name})`}
-              onError={() => {
-                const paddedNum = String(card.number ?? 0).padStart(2, '0');
-                const fallback =
-                  card.arcana === 'major'
-                    ? `/cards/major-${paddedNum}.png`
-                    : `/cards/${card.suit ?? 'wands'}-${paddedNum}.png`;
-                if (frontSrc !== fallback) {
-                  setFrontSrc(fallback);
-                }
-              }}
-              className={`w-full h-full ${imgFitClass} block select-none transition-transform duration-500 ${
-                reversed ? 'rotate-180' : ''
-              }`}
-              draggable={false}
-            />
+            {!imgFailed ? (
+              <img
+                src={frontSrc}
+                alt={`${card.nameKo} (${card.name})`}
+                onError={() => {
+                  const paddedNum = String(card.id ?? 0).padStart(2, '0');
+                  const fallback =
+                    card.arcana === 'major'
+                      ? `/cards/major-${paddedNum}.png`
+                      : `/cards/${card.suit ?? 'wands'}-${paddedNum}.png`;
+                  if (frontSrc !== fallback && !frontSrc.startsWith('/cards/')) {
+                    setFrontSrc(fallback);
+                  } else {
+                    setImgFailed(true);
+                  }
+                }}
+                className={`w-full h-full ${imgFitClass} block select-none transition-transform duration-500 ${
+                  reversed ? 'rotate-180' : ''
+                }`}
+                draggable={false}
+              />
+            ) : (
+              <div
+                className={`w-full h-full flex flex-col items-center justify-center p-2 text-center bg-gradient-to-b from-night-800 to-night-950 ${
+                  reversed ? 'rotate-180' : ''
+                }`}
+              >
+                <span className="text-[10px] text-gold-400/80 font-serif">
+                  {card.arcana === 'major' ? 'MAJOR' : (card.suit ?? '').toUpperCase()}
+                </span>
+                <span className="mt-1 text-xs font-serif font-bold text-gold-200">
+                  {card.nameKo}
+                </span>
+                <span className="mt-0.5 text-[9px] text-mystic-300/70">
+                  {card.name}
+                </span>
+              </div>
+            )}
 
             {reversed && (
               <div className="absolute inset-0 flex items-center justify-center bg-night-950/30 pointer-events-none">
