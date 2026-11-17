@@ -13,8 +13,16 @@ interface ReadingRequest {
 }
 
 const POSITIONS = ['과거', '현재', '미래'] as const;
-const MODEL = 'gemini-3.8-flash';
-const MAX_RETRIES = 3;
+
+// 503 폭주 시 순서대로 시도할 모델 후보군
+const MODEL_CANDIDATES = [
+  'gemini-3.8-flash',
+  'gemini-2.5-flash',
+  'gemini-2.5-flash-lite',
+  'gemini-2.0-flash',
+] as const;
+
+const ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/interactions';
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -49,6 +57,43 @@ function extractInteractionText(data: Record<string, unknown>): string {
   return chunks.join('\n').trim();
 }
 
+async function callModel(
+  model: string,
+  prompt: string,
+  cleanKey: string
+): Promise<{ ok: true; text: string } | { ok: false; status: number; detail: string }> {
+  const response = await fetch(ENDPOINT, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-goog-api-key': cleanKey,
+    },
+    body: JSON.stringify({
+      model,
+      input: prompt,
+    }),
+  });
+
+  if (response.ok) {
+    const data = (await response.json()) as Record<string, unknown>;
+    const text = extractInteractionText(data);
+    if (!text) {
+      return { ok: false, status: 200, detail: '빈 응답' };
+    }
+    return { ok: true, text };
+  }
+
+  let detail = '';
+  try {
+    const errJson = await response.json();
+    detail = errJson?.error?.message || '';
+  } catch {
+    // ignore json parse error
+  }
+
+  return { ok: false, status: response.status, detail };
+}
+
 export async function getTarotReading(
   { question, cards, reader }: ReadingRequest,
   apiKey: string
@@ -77,55 +122,34 @@ ${cardSummary}
 
 위 세 장의 카드를 바탕으로 [카드 총평], [과거의 흐름], [현재의 상황], [미래의 조언] 소제목을 대괄호([ ])로 구분하여 따뜻하고 깊이 있게 해석해 주세요.`;
 
-  const endpoint = 'https://generativelanguage.googleapis.com/v1beta/interactions';
+  const failures: string[] = [];
 
-  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-goog-api-key': cleanKey,
-      },
-      body: JSON.stringify({
-        model: MODEL,
-        input: prompt,
-      }),
-    });
+  for (let round = 0; round < 2; round++) {
+    if (round > 0) {
+      await sleep(1200);
+    }
 
-    if (response.ok) {
-      const data = (await response.json()) as Record<string, unknown>;
-      const text = extractInteractionText(data);
+    for (const model of MODEL_CANDIDATES) {
+      const result = await callModel(model, prompt, cleanKey);
 
-      if (!text) {
-        throw new Error('해석 결과를 받아오지 못했습니다. 다시 시도해 주세요.');
+      if (result.ok) {
+        return result.text;
       }
-      return text;
-    }
 
-    let detail = '';
-    try {
-      const errJson = await response.json();
-      detail = errJson?.error?.message || '';
-    } catch {
-      // ignore json parse error
-    }
+      // 400/403은 키 자체의 권한/형식 문제이므로 다른 모델로 돌려도 똑같이 실패함
+      if (result.status === 400 || result.status === 403) {
+        throw new Error(
+          `API 키가 올바르지 않거나 권한이 없습니다. (${result.detail || result.status})`
+        );
+      }
 
-    // 503(서버 폭주) 또는 429(일시적 한도)는 잠시 대기 후 재시도
-    if ((response.status === 503 || response.status === 429) && attempt < MAX_RETRIES) {
-      await sleep(1500 * Math.pow(2, attempt));
-      continue;
+      failures.push(`${model}: ${result.status}`);
     }
-
-    if (response.status === 400 || response.status === 403) {
-      throw new Error(`API 키가 올바르지 않거나 권한이 없습니다. (${detail || response.status})`);
-    }
-    if (response.status === 429) {
-      throw new Error(`API 호출 한도를 초과했습니다. 잠시 후 다시 시도해 주세요. (${detail})`);
-    }
-    throw new Error(
-      `별들의 목소리를 듣지 못했어요. (${response.status}${detail ? `: ${detail}` : ''})`
-    );
   }
 
-  throw new Error('별들의 목소리를 듣지 못했어요. 잠시 후 다시 시도해 주세요.');
+  throw new Error(
+    `모든 모델이 일시적으로 응답하지 않아요. 잠시 후 다시 시도해 주세요. (${failures
+      .slice(-4)
+      .join(', ')})`
+  );
 }
