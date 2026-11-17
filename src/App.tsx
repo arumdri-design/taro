@@ -194,7 +194,7 @@ export default function App() {
         <div className="flex items-center gap-2">
           <Moon className="w-5 h-5 text-gold-400" />
           <span className="font-serif font-bold text-gold-200 text-sm sm:text-base">
-            밤하늘 타로 상담소
+            밤하늘 타로1 상담소
           </span>
         </div>
         <div className="flex items-center gap-2">
