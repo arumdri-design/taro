@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Moon,
   Shuffle,
@@ -25,26 +25,35 @@ type Stage = 'question' | 'shuffle' | 'select' | 'loading' | 'result';
 
 const MAX_PICKS = 3;
 const TOTAL_SHOWN = 78;
-
 const STORAGE_KEY = 'tarot-gemini-key';
 
 function pickRandomCards(count: number): DrawnCard[] {
   const pool = [...tarotCards];
-  const picked: DrawnCard[] = [];
-  for (let i = 0; i < count; i++) {
+  const result: DrawnCard[] = [];
+  const limit = Math.min(count, pool.length);
+
+  for (let i = 0; i < limit; i++) {
     const idx = Math.floor(Math.random() * pool.length);
     const card = pool.splice(idx, 1)[0];
-    picked.push({ card, reversed: Math.random() < 0.4 });
+    if (card) {
+      result.push({ card, reversed: Math.random() < 0.4 });
+    }
   }
-  return picked;
+  return result;
 }
 
-function getCardBriefInfo(card: TarotCard, reversed: boolean) {
+function getCardBriefInfo(card: TarotCard | undefined, reversed: boolean) {
+  if (!card) {
+    return {
+      keywords: '',
+      meaning: '새로운 흐름과 내면의 신호가 교차하는 시점입니다.',
+    };
+  }
   const directionData = reversed ? card.reversed : card.upright;
-  const keywords =
-    directionData?.keywords?.slice(0, 3).join(' · ') ||
-    card.keywords?.slice(0, 3).join(' · ') ||
-    '';
+  const rawKeywords = directionData?.keywords ?? [];
+  const keywords = Array.isArray(rawKeywords)
+    ? rawKeywords.slice(0, 3).join(' · ')
+    : '';
   const meaning =
     directionData?.meaning ||
     '새로운 흐름과 내면의 신호가 교차하는 시점입니다.';
@@ -71,24 +80,35 @@ export default function App() {
   const apiKey = manualKey || envKey || '';
 
   useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) setManualKey(saved);
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) setManualKey(saved);
+    } catch {
+      // 사파리/인앱 브라우저 스토리지 제한 무시
+    }
   }, []);
 
   const saveKey = (key: string) => {
     setManualKey(key);
-    localStorage.setItem(STORAGE_KEY, key);
+    try {
+      localStorage.setItem(STORAGE_KEY, key);
+    } catch {
+      // 무시
+    }
   };
 
   const revealedCards = useMemo(
-    () => picked.map((cardIdx) => deck[cardIdx]),
+    () =>
+      picked
+        .map((cardIdx) => deck[cardIdx])
+        .filter((item): item is DrawnCard => Boolean(item)),
     [deck, picked]
   );
 
   const revealingItem = useMemo(() => {
     if (revealingIndex === null) return null;
     const drawn = deck[revealingIndex];
-    if (!drawn) return null;
+    if (!drawn || !drawn.card) return null;
     const brief = getCardBriefInfo(drawn.card, drawn.reversed);
     return {
       ...drawn,
@@ -110,17 +130,21 @@ export default function App() {
 
   const startShuffle = useCallback(() => {
     if (!question.trim()) return;
-    bgm.start();
+    try {
+      bgm.start();
+    } catch {
+      // 오디오 자동재생 제한 무시
+    }
     beginShuffle();
   }, [question, bgm, beginShuffle]);
 
-  // 카드 선택 시 즉시 확정하지 않고 화면 중앙 확대 뒤집기 연출로 진입
   const pickCard = (index: number) => {
     if (
       stage !== 'select' ||
       revealingIndex !== null ||
       picked.includes(index) ||
-      picked.length >= MAX_PICKS
+      picked.length >= MAX_PICKS ||
+      !deck[index]
     ) {
       return;
     }
@@ -135,7 +159,6 @@ export default function App() {
     });
   };
 
-  // 확대된 카드를 터치/클릭하면 축소되며 선택 완료
   const confirmRevealedCard = () => {
     if (revealingIndex === null) return;
     const targetIdx = revealingIndex;
@@ -153,7 +176,7 @@ export default function App() {
     setStage('loading');
     setError('');
     try {
-      const drawn = picked.map((i) => deck[i]);
+      const drawn = revealedCards;
       const text = await getTarotReading(
         { question: question.trim(), cards: drawn, reader },
         apiKey
@@ -167,12 +190,23 @@ export default function App() {
   };
 
   const copyResult = async () => {
+    const payload = `[밤하늘 타로 상담 - ${reader.name} 점술가]\n고민: ${question}\n카드: ${revealedCards
+      .map((c) => `${c.card.nameKo}(${c.reversed ? '역방향' : '정방향'})`)
+      .join(', ')}\n\n${reading}`;
+
     try {
-      await navigator.clipboard.writeText(
-        `[밤하늘 타로 상담 - ${reader.name} 점술가]\n고민: ${question}\n카드: ${revealedCards
-          .map((c) => `${c.card.nameKo}(${c.reversed ? '역방향' : '정방향'})`)
-          .join(', ')}\n\n${reading}`
-      );
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(payload);
+      } else {
+        const textarea = document.createElement('textarea');
+        textarea.value = payload;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+      }
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
@@ -189,18 +223,23 @@ export default function App() {
       <Starfield />
       <ApiKeyModal open={keyModalOpen} onClose={() => setKeyModalOpen(false)} onSave={saveKey} />
 
-      {/* 헤더 */}
       <header className="relative z-10 flex items-center justify-between px-4 pt-3 sm:px-6 sm:pt-5 w-full max-w-lg mx-auto shrink-0">
         <div className="flex items-center gap-2">
           <Moon className="w-5 h-5 text-gold-400" />
           <span className="font-serif font-bold text-gold-200 text-sm sm:text-base">
-            밤하늘 타로1 상담소
+            밤하늘 타로 상담소
           </span>
         </div>
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={bgm.toggle}
+            onClick={() => {
+              try {
+                bgm.toggle();
+              } catch {
+                // 무시
+              }
+            }}
             className="p-2 rounded-full border border-gold-500/30 text-gold-400 hover:bg-gold-500/10 transition-colors"
             aria-label={bgm.playing ? '배경음악 끄기' : '배경음악 켜기'}
           >
@@ -239,7 +278,6 @@ export default function App() {
             : 'pb-10 overflow-y-auto'
         }`}
       >
-        {/* 1단계: 점술가 선택 + 고민 입력 */}
         {stage === 'question' && (
           <section className="mt-4 animate-fade-in-up">
             <div className="relative w-full aspect-square overflow-hidden rounded-2xl border border-gold-500/35 mb-4 shadow-xl shadow-black/40">
@@ -315,7 +353,6 @@ export default function App() {
           </section>
         )}
 
-        {/* 셔플 중 */}
         {stage === 'shuffle' && (
           <section className="mt-20 sm:mt-28 flex flex-col items-center animate-fade-in">
             <div className="flex gap-2 mb-8">
@@ -339,7 +376,6 @@ export default function App() {
           </section>
         )}
 
-        {/* 2단계: 카드 선택 (스크롤 없이 한 화면에 고정 배치) */}
         {stage === 'select' && (
           <section className="flex flex-col justify-between h-full w-full overflow-hidden min-h-0 animate-fade-in-up">
             <div className="flex flex-col items-center text-center mb-1 shrink-0">
@@ -349,7 +385,6 @@ export default function App() {
               </h2>
             </div>
 
-            {/* 스크롤 없이 한 화면에 들어오는 2줄 겹침 덱 영역 */}
             <div className="relative flex-1 min-h-0 w-full flex items-center justify-center overflow-hidden my-1">
               <FanSpread
                 deck={deck}
@@ -382,7 +417,6 @@ export default function App() {
           </section>
         )}
 
-        {/* 로딩 */}
         {stage === 'loading' && (
           <section className="mt-8 flex flex-col items-center animate-fade-in">
             <div className="relative w-16 h-16 mb-4">
@@ -402,7 +436,6 @@ export default function App() {
           </section>
         )}
 
-        {/* 4단계: 결과 */}
         {stage === 'result' && (
           <section className="mt-6 animate-fade-in-up">
             <div className="text-center mb-6">
@@ -487,7 +520,6 @@ export default function App() {
         )}
       </main>
 
-      {/* 하단 배너 광고 영역 */}
       {stage !== 'select' && (
         <footer className="relative z-10 w-full max-w-lg mx-auto px-4 pb-6 sm:px-6 shrink-0">
           <div
@@ -501,7 +533,6 @@ export default function App() {
         </footer>
       )}
 
-      {/* 카드 선택 시 중앙 확대 뒤집기 + 간단 해석 오버레이 (터치/클릭 시 축소 완료) */}
       {revealingItem && (
         <div
           onClick={confirmRevealedCard}
@@ -512,7 +543,6 @@ export default function App() {
           }}
           className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-4 bg-black/85 backdrop-blur-sm px-5 py-6 select-none cursor-pointer transition-opacity duration-300"
         >
-          {/* 카드 세로 높이 기준으로 너비가 자동 계산되어 상하단이 잘리지 않음 */}
           <div
             className={`h-[48dvh] max-h-[420px] min-h-[250px] aspect-[2/3] shrink-0 transition-all duration-500 ease-out ${
               revealFlipped
@@ -529,7 +559,6 @@ export default function App() {
             />
           </div>
 
-          {/* 카드 간단 해석 박스 */}
           <div
             className={`w-full max-w-sm shrink-0 rounded-2xl border border-gold-400/40 bg-night-900/90 px-4 py-3 text-center shadow-xl transition-all duration-500 ${
               revealFlipped ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'
