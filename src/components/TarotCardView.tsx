@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { TarotCard } from '@/data/tarotCards';
 
 interface TarotCardViewProps {
@@ -15,6 +15,33 @@ interface TarotCardViewProps {
 
 const DEFAULT_CARD_BACK = '/images/card-back.png';
 
+function buildCandidatePaths(card: TarotCard): string[] {
+  const candidates: string[] = [];
+  if (card.image) candidates.push(card.image);
+
+  const paddedId = String(card.id ?? 0).padStart(2, '0');
+  const minorNum = card.arcana === 'minor' ? ((card.id - 22) % 14) + 1 : card.id;
+  const paddedMinor = String(minorNum).padStart(2, '0');
+  const suit = card.suit ?? 'wands';
+
+  if (card.arcana === 'major') {
+    candidates.push(
+      `/cards/major-${paddedId}.png`,
+      `/cards/${paddedId}.png`,
+      `/images/cards/major-${paddedId}.png`,
+      `/images/cards/${paddedId}.png`
+    );
+  } else {
+    candidates.push(
+      `/cards/${suit}-${paddedMinor}.png`,
+      `/cards/${suit}_${paddedMinor}.png`,
+      `/images/cards/${suit}-${paddedMinor}.png`
+    );
+  }
+
+  return Array.from(new Set(candidates));
+}
+
 export default function TarotCardView({
   card,
   reversed,
@@ -27,13 +54,15 @@ export default function TarotCardView({
   fit = 'cover',
 }: TarotCardViewProps) {
   const [backSrc, setBackSrc] = useState(DEFAULT_CARD_BACK);
-  const [frontSrc, setFrontSrc] = useState(card.image || DEFAULT_CARD_BACK);
-  const [imgFailed, setImgFailed] = useState(false);
+  const candidatePaths = useMemo(() => buildCandidatePaths(card), [card]);
+  const [candidateIdx, setCandidateIdx] = useState(0);
 
   useEffect(() => {
-    setFrontSrc(card.image || DEFAULT_CARD_BACK);
-    setImgFailed(false);
-  }, [card.image, card.id]);
+    setCandidateIdx(0);
+  }, [card.id, card.image]);
+
+  const frontSrc = candidatePaths[candidateIdx] ?? DEFAULT_CARD_BACK;
+  const imgFailed = candidateIdx >= candidatePaths.length;
 
   const imgFitClass =
     fit === 'contain' ? 'object-contain p-1 bg-night-950' : 'object-cover';
@@ -94,16 +123,7 @@ export default function TarotCardView({
                 src={frontSrc}
                 alt={`${card.nameKo} (${card.name})`}
                 onError={() => {
-                  const paddedNum = String(card.id ?? 0).padStart(2, '0');
-                  const fallback =
-                    card.arcana === 'major'
-                      ? `/cards/major-${paddedNum}.png`
-                      : `/cards/${card.suit ?? 'wands'}-${paddedNum}.png`;
-                  if (frontSrc !== fallback && !frontSrc.startsWith('/cards/')) {
-                    setFrontSrc(fallback);
-                  } else {
-                    setImgFailed(true);
-                  }
+                  setCandidateIdx((prev) => prev + 1);
                 }}
                 className={`w-full h-full ${imgFitClass} block select-none transition-transform duration-500 ${
                   reversed ? 'rotate-180' : ''
@@ -124,14 +144,6 @@ export default function TarotCardView({
                 </span>
                 <span className="mt-0.5 text-[9px] text-mystic-300/70">
                   {card.name}
-                </span>
-              </div>
-            )}
-
-            {reversed && (
-              <div className="absolute inset-0 flex items-center justify-center bg-night-950/30 pointer-events-none">
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-rose-500/25 text-rose-200 border border-rose-300/40 backdrop-blur-sm">
-                  역방향
                 </span>
               </div>
             )}
