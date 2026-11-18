@@ -21,8 +21,7 @@ import useAmbientBgm from '@/hooks/useAmbientBgm';
 import { tarotCards, type TarotCard } from '@/data/tarotCards';
 import { readers, type Reader } from '@/data/readers';
 import { getTarotReading, type DrawnCard } from '@/services/gemini';
-import { getSajuReading } from '@/services/sajuGemini';
-import type { SajuInput, SajuGender, SajuCalendar } from '@/data/sajuTypes';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 type Stage =
   | 'question'
@@ -33,6 +32,9 @@ type Stage =
   | 'saju-input'
   | 'saju-loading'
   | 'saju-result';
+
+type SajuGender = 'male' | 'female';
+type SajuCalendar = 'solar' | 'lunar';
 
 const SLOT_LABELS = ['첫 번째 카드', '두 번째 카드', '세 번째 카드'] as const;
 const MAX_PICKS = 3;
@@ -73,6 +75,51 @@ function getCardBriefInfo(card: TarotCard | undefined, reversed: boolean) {
   return { keywords, meaning };
 }
 
+async function fetchSajuReading(
+  input: {
+    name: string;
+    gender: SajuGender;
+    calendar: SajuCalendar;
+    birthYear: number;
+    birthMonth: number;
+    birthDay: number;
+    birthHour?: number;
+  },
+  reader: Reader,
+  apiKey: string
+): Promise<string> {
+  if (!apiKey) throw new Error('Gemini API 키가 필요합니다.');
+  const genAI = new GoogleGenerativeAI(apiKey);
+  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
+
+  const hourText = input.birthHour !== undefined ? `${input.birthHour}시` : '시간 미상';
+  const calendarText = input.calendar === 'solar' ? '양력' : '음력';
+  const genderText = input.gender === 'male' ? '남성' : '여성';
+
+  const prompt = `
+당신은 깊은 통찰력을 지닌 신비로운 사주 명리 및 운세 전문가이자, 밤하늘 타로 상담소의 파트너 ${reader.name}(${reader.nameEn})입니다.
+아래 내담자의 사주 정보를 바탕으로 정성스럽고 깊이 있는 사주풀이(총운, 타고난 본질, 올해의 운세, 조언)를 작성해 주세요.
+
+[내담자 사주 정보]
+- 이름: ${input.name}
+- 성별: ${genderText}
+- 생년월일: ${input.birthYear}년 ${input.birthMonth}월 ${input.birthDay}일 (${calendarText})
+- 태어난 시간: ${hourText}
+- 담당 상담가: ${reader.name} (${reader.trait})
+
+[작성 지침]
+1. 상담가의 고유한 말투와 분위기를 살려 신뢰감 있고 따뜻하게 작성해 주세요.
+2. 대괄호 형식(예: [총운과 기운], [타고난 성향과 본질], [올해의 흐름과 조언])으로 섹션을 나누어 가독성 있게 구성해 주세요.
+3. 마크다운 형식으로 풍부하고 몰입감 있게 작성해 주세요.
+`.trim();
+
+  const result = await model.generateContent(prompt);
+  const response = await result.response;
+  const text = response.text();
+  if (!text) throw new Error('응답을 생성하지 못했어요.');
+  return text;
+}
+
 export default function App() {
   const [stage, setStage] = useState<Stage>('question');
   const [question, setQuestion] = useState('');
@@ -106,7 +153,7 @@ export default function App() {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) setManualKey(saved);
     } catch {
-      // 스토리지 접근 제한 무시
+      // 무시
     }
   }, []);
 
@@ -115,7 +162,7 @@ export default function App() {
     try {
       localStorage.setItem(STORAGE_KEY, key);
     } catch {
-      // 스토리지 접근 제한 무시
+      // 무시
     }
   };
 
@@ -163,7 +210,7 @@ export default function App() {
     try {
       bgm.start();
     } catch {
-      // 오디오 자동재생 제한 무시
+      // 무시
     }
     setStage('shuffle');
     setDeck(pickRandomCards(TOTAL_SHOWN));
@@ -174,16 +221,6 @@ export default function App() {
     setError('');
     setTimeout(() => setStage('select'), 1600);
   }, [question, bgm]);
-
-  const startSaju = useCallback(() => {
-    if (!sajuName.trim()) return;
-    try {
-      bgm.start();
-    } catch {
-      // 무시
-    }
-    setStage('saju-input');
-  }, [sajuName, bgm]);
 
   const submitSaju = async () => {
     const y = parseInt(sajuYear, 10);
@@ -201,18 +238,20 @@ export default function App() {
     setStage('saju-loading');
     setError('');
 
-    const input: SajuInput = {
-      name: sajuName.trim(),
-      gender: sajuGender,
-      calendar: sajuCalendar,
-      birthYear: y,
-      birthMonth: m,
-      birthDay: d,
-      birthHour: sajuHour === '모름' ? undefined : parseInt(sajuHour, 10),
-    };
-
     try {
-      const text = await getSajuReading(input, reader, apiKey);
+      const text = await fetchSajuReading(
+        {
+          name: sajuName.trim() || '내담자',
+          gender: sajuGender,
+          calendar: sajuCalendar,
+          birthYear: y,
+          birthMonth: m,
+          birthDay: d,
+          birthHour: sajuHour === '모름' ? undefined : parseInt(sajuHour, 10),
+        },
+        reader,
+        apiKey
+      );
       setReading(text);
       setStage('saju-result');
     } catch (err) {
@@ -410,7 +449,7 @@ export default function App() {
                     setSajuName(e.target.value.trim().slice(0, 10));
                   }
                 }}
-                placeholder="예: 요즘 연애운이 궁금해요. 좋은 인연이 있을까요? (사주 입력 시 이름으로도 활용돼요)"
+                placeholder="예: 요즘 연애운이 궁금해요. 좋은 인연이 있을까요?"
                 rows={2}
                 maxLength={500}
                 className="w-full resize-none rounded-xl bg-night-800 border border-gold-500/25 px-3 py-2 text-xs sm:text-sm text-gold-100 placeholder:text-mystic-300/40 leading-snug focus:outline-none focus:border-gold-400 transition-colors"
@@ -535,7 +574,7 @@ export default function App() {
                     type="number"
                     value={sajuYear}
                     onChange={(e) => setSajuYear(e.target.value)}
-                    placeholder="년도 (예: 1995)"
+                    placeholder="년도"
                     className="rounded-xl bg-night-800 border border-gold-500/25 px-3 py-2 text-xs text-gold-100 focus:outline-none focus:border-gold-400 text-center"
                   />
                   <input
@@ -625,7 +664,7 @@ export default function App() {
               ))}
             </div>
             <p className="font-serif text-gold-300 text-sm animate-pulse">
-              카드를 섞고 있어요...
+              카드를 준비하고 있어요...
             </p>
           </section>
         )}
@@ -650,7 +689,7 @@ export default function App() {
           </section>
         )}
 
-        {/* 2단계: 카드 선택 (상단 3슬롯 바로 밑에 원형 덱 배치) */}
+        {/* 2단계: 카드 선택 */}
         {stage === 'select' && (
           <section className="flex flex-col gap-3 w-full pt-2 animate-fade-in-up">
             <div className="shrink-0">
@@ -659,7 +698,6 @@ export default function App() {
                 <p>선택한 3장의 카드가 순서대로 놓입니다</p>
               )}
 
-              {/* 선택된 3장의 카드가 배치되는 슬롯 영역 */}
               <div className="mt-2 grid grid-cols-3 gap-2.5">
                 {SLOT_LABELS.map((slotName, i) => {
                   const selectedIdx = picked[i];
@@ -708,7 +746,6 @@ export default function App() {
               </div>
             </div>
 
-            {/* 선택된 3슬롯 바로 밑 원형 덱 영역 */}
             <div className="w-full">
               <FanSpread
                 deck={deck}
@@ -755,13 +792,10 @@ export default function App() {
             <p className="font-serif text-gold-300 text-base animate-pulse">
               별들의 목소리를 듣고 있습니다...
             </p>
-            <p className="mt-2 text-xs text-mystic-300/60">
-              {reader.name}가 당신의 고민과 카드를 하나로 이어보고 있어요
-            </p>
           </section>
         )}
 
-        {/* 4단계: 결과 (타로) */}
+        {/* 결과 (타로) */}
         {stage === 'result' && (
           <section className="mt-6 animate-fade-in-up">
             <div className="text-center mb-6">
@@ -794,9 +828,6 @@ export default function App() {
                 </p>
                 <p className="text-sm font-bold font-serif text-gold-200">
                   {reader.name} 점술가
-                </p>
-                <p className="text-[10px] text-white/85 leading-snug mt-0.5">
-                  {reader.trait}
                 </p>
               </div>
 
@@ -846,7 +877,7 @@ export default function App() {
           </section>
         )}
 
-        {/* 사주 결과 화면 */}
+        {/* 결과 (사주) */}
         {stage === 'saju-result' && (
           <section className="mt-6 animate-fade-in-up">
             <div className="text-center mb-6">
@@ -928,7 +959,7 @@ export default function App() {
         </footer>
       )}
 
-      {/* 카드 선택 시 중앙 확대 뒤집기 + 간단 해석 오버레이 */}
+      {/* 카드 선택 시 중앙 확대 뒤집기 오버레이 */}
       {revealingItem && (
         <div
           onClick={confirmRevealedCard}
