@@ -4,7 +4,7 @@ import {
   Shuffle,
   Sparkles,
   Copy,
-  RotateCcw,
+  Home,
   Settings,
   Check,
   Star,
@@ -125,6 +125,17 @@ export default function App() {
       meaning: brief.meaning,
     };
   }, [revealingIndex, deck, picked.length]);
+
+  const goHome = useCallback(() => {
+    setStage('question');
+    setQuestion('');
+    setDeck([]);
+    setPicked([]);
+    setRevealingIndex(null);
+    setRevealFlipped(false);
+    setReading('');
+    setError('');
+  }, []);
 
   const beginShuffle = useCallback(() => {
     setStage('shuffle');
@@ -560,11 +571,11 @@ export default function App() {
             <div className="mt-6 grid grid-cols-2 gap-3">
               <button
                 type="button"
-                onClick={beginShuffle}
+                onClick={goHome}
                 className="flex items-center justify-center gap-2 rounded-xl py-3.5 text-sm font-bold border border-gold-500/40 bg-night-800/60 text-gold-300 hover:bg-gold-500/10 transition-all active:scale-[0.98]"
               >
-                <RotateCcw className="w-4 h-4" />
-                다시 뽑기
+                <Home className="w-4 h-4" />
+                홈으로 가기
               </button>
               <button
                 type="button"
