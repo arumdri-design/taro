@@ -701,46 +701,47 @@ export default function App() {
           </section>
         )}
 
-        {/* 카드 개별 선택 시 자동 뒤집힘 및 터치 유도 창 */}
+        {/* 카드 개별 선택 시 자동 뒤집힘 및 터치 유도 창 (카드 크기 및 세로 영역 확장) */}
         {revealingIndex !== null && revealingItem && (
           <div 
             onClick={handlePopupClick}
             className="fixed inset-0 z-50 flex items-center justify-center bg-night-950/85 backdrop-blur-md p-4 animate-fade-in cursor-pointer"
           >
-            <div className="w-full max-w-sm rounded-2xl gold-border bg-night-900 p-6 text-center shadow-2xl animate-scale-up" onClick={(e) => e.stopPropagation()}>
+            {/* 팝업 박스 너비를 max-w-xs로 모아주고 내부 패딩을 조절 */}
+            <div className="w-full max-w-xs rounded-2xl gold-border bg-night-900 p-5 text-center shadow-2xl animate-scale-up" onClick={(e) => e.stopPropagation()}>
               <p className="text-xs text-gold-400 font-serif mb-1">
                 {revealingItem.position}
               </p>
-              <h3 className="text-lg font-bold font-serif text-gold-200 mb-3">
+              <h3 className="text-base font-bold font-serif text-gold-200 mb-2.5">
                 선택하신 카드
               </h3>
 
-              {/* 팝업 카드 영역: aspect-[2/3]와 w-44를 주어 찌그러짐 없이 큼직하게 표시 */}
+              {/* 핵심 수정: 카드 너비를 w-52(약 208px)로 크게 키우고 aspect-[2/3]로 세로 비율과 공간 확보 */}
               <div 
                 onClick={handlePopupClick}
-                className="w-44 mx-auto mb-4 aspect-[2/3] cursor-pointer shadow-2xl relative"
+                className="w-52 mx-auto mb-3.5 aspect-[2/3] cursor-pointer shadow-2xl relative"
               >
                 <TarotCardView
                   card={revealingItem.card}
                   reversed={revealingItem.reversed}
                   revealed={revealFlipped}
-                  fit="cover"
+                  fit="contain"
                 />
               </div>
 
               {revealFlipped ? (
-                <div className="space-y-3 animate-fade-in" onClick={handlePopupClick}>
+                <div className="space-y-2.5 animate-fade-in" onClick={handlePopupClick}>
                   <div>
                     <p className="text-sm font-serif font-bold text-gold-200">
                       {revealingItem.card.nameKo}
                       {revealingItem.reversed ? ' (역방향)' : ' (정방향)'}
                     </p>
-                    <p className="mt-1 text-xs text-mystic-300/80 leading-relaxed">
+                    <p className="mt-1 text-xs text-mystic-300/80 leading-relaxed px-1">
                       {revealingItem.meaning}
                     </p>
                   </div>
 
-                  <p className="text-xs text-gold-400 animate-pulse pt-2 font-serif font-bold">
+                  <p className="text-xs text-gold-400 animate-pulse pt-1.5 font-serif font-bold">
                     ✨ 화면을 터치해주세요 ✨
                   </p>
                 </div>
