@@ -91,7 +91,6 @@ export default function App() {
   const [reader, setReader] = useState<Reader>(readers[0]);
   const bgm = useAmbientBgm();
 
-  // 서버리스 백엔드 사용으로 프론트엔드 키 불필요
   const apiKey = 'server-managed';
 
   const revealedCards = useMemo(
@@ -479,3 +478,367 @@ export default function App() {
                     type="number"
                     value={sajuMonth}
                     onChange={(e) => setSajuMonth(e.target.value)}
+                    placeholder="월"
+                    className="rounded-xl bg-night-800 border border-gold-500/25 px-3 py-2 text-xs text-gold-100 focus:outline-none focus:border-gold-400 text-center"
+                  />
+                  <input
+                    type="number"
+                    value={sajuDay}
+                    onChange={(e) => setSajuDay(e.target.value)}
+                    placeholder="일"
+                    className="rounded-xl bg-night-800 border border-gold-500/25 px-3 py-2 text-xs text-gold-100 focus:outline-none focus:border-gold-400 text-center"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs text-gold-400 font-serif mb-1">태어난 시간</label>
+                <select
+                  value={sajuHour}
+                  onChange={(e) => setSajuHour(e.target.value)}
+                  className="w-full rounded-xl bg-night-800 border border-gold-500/25 px-3 py-2.5 text-xs text-gold-100 focus:outline-none focus:border-gold-400"
+                >
+                  <option value="모름">시간 모름 (또는 무관)</option>
+                  <option value="0">자시 (23:30 ~ 01:29)</option>
+                  <option value="2">축시 (01:30 ~ 03:29)</option>
+                  <option value="4">인시 (03:30 ~ 05:29)</option>
+                  <option value="6">묘시 (05:30 ~ 07:29)</option>
+                  <option value="8">진시 (07:30 ~ 09:29)</option>
+                  <option value="10">사시 (09:30 ~ 11:29)</option>
+                  <option value="12">오시 (11:30 ~ 13:29)</option>
+                  <option value="14">미시 (13:30 ~ 15:29)</option>
+                  <option value="16">신시 (15:30 ~ 17:29)</option>
+                  <option value="18">유시 (17:30 ~ 19:29)</option>
+                  <option value="20">술시 (19:30 ~ 21:29)</option>
+                  <option value="22">해시 (21:30 ~ 23:29)</option>
+                </select>
+              </div>
+
+              {error && (
+                <div className="flex items-start gap-2 rounded-xl border border-rose-400/40 bg-rose-500/10 px-3 py-2 text-xs text-rose-200">
+                  <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+                  <span>{error}</span>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={goHome}
+                  className="rounded-xl py-3 text-xs font-bold border border-gold-500/40 bg-night-800 text-gold-300 hover:bg-gold-500/10 transition-all"
+                >
+                  돌아가기
+                </button>
+                <button
+                  type="button"
+                  onClick={submitSaju}
+                  disabled={!sajuName.trim()}
+                  className="rounded-xl py-3 text-xs font-bold bg-gradient-to-r from-gold-500 to-gold-400 text-night-950 shadow-lg shadow-gold-500/20 disabled:opacity-40 hover:brightness-110 transition-all"
+                >
+                  사주 풀이 보기
+                </button>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* 셔플 중 */}
+        {stage === 'shuffle' && (
+          <section className="mt-20 sm:mt-28 flex flex-col items-center animate-fade-in">
+            <div className="flex gap-2 mb-8">
+              {[0, 1, 2, 3, 4].map((i) => (
+                <div
+                  key={i}
+                  className="w-14 h-24 sm:w-16 sm:h-28 rounded-lg border border-gold-500/40 bg-night-900 overflow-hidden animate-shuffle"
+                  style={{ animationDelay: `${i * 0.1}s` }}
+                >
+                  <img
+                    src="/images/card-back.png"
+                    alt="카드 뒷면"
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              ))}
+            </div>
+            <p className="font-serif text-gold-300 text-sm animate-pulse">
+              카드를 준비하고 있어요...
+            </p>
+          </section>
+        )}
+
+        {/* 사주 로딩 중 */}
+        {stage === 'saju-loading' && (
+          <section className="mt-20 sm:mt-28 flex flex-col items-center animate-fade-in">
+            <div className="relative w-16 h-16 mb-4">
+              <div className="absolute inset-0 rounded-full border-2 border-gold-500/20" />
+              <div className="absolute inset-0 rounded-full border-t-2 border-gold-400 animate-spin" />
+              <CalendarIcon
+                className="absolute inset-0 m-auto w-7 h-7 text-gold-300 animate-pulse"
+                strokeWidth={1.2}
+              />
+            </div>
+            <p className="font-serif text-gold-300 text-base animate-pulse">
+              사주 명식을 분석하고 있습니다...
+            </p>
+          </section>
+        )}
+
+        {/* 사주 결과 */}
+        {stage === 'saju-result' && (
+          <section className="mt-6 animate-fade-in-up">
+            <div className="text-center mb-6">
+              <h2 className="font-serif text-xl sm:text-2xl font-bold gold-text">
+                {reader.name}가 풀이한 사주 명식
+              </h2>
+              <p className="mt-1.5 text-xs text-mystic-300/70">
+                {sajuName}님의 운세 결과입니다.
+              </p>
+            </div>
+
+            <article className="rounded-2xl gold-border bg-night-900/70 backdrop-blur-sm p-5 sm:p-6 mb-4">
+              <div className="space-y-4 text-sm text-white/95 leading-[1.8] font-serif whitespace-pre-wrap">
+                {reading}
+              </div>
+            </article>
+
+            <button
+              type="button"
+              onClick={goHome}
+              className="w-full rounded-xl py-3 text-sm font-bold bg-gradient-to-r from-gold-500 to-gold-400 text-night-950 shadow-lg hover:brightness-110 transition-all"
+            >
+              처음으로 돌아가기
+            </button>
+          </section>
+        )}
+
+        {/* 2단계: 카드 선택 */}
+        {stage === 'select' && (
+          <section className="flex flex-col gap-3 w-full pt-2 animate-fade-in-up">
+            <div className="shrink-0">
+              {selectHeader(
+                `${reader.name}가 세 장의 카드를 기다립니다`,
+                <p>선택한 3장의 카드가 순서대로 놓입니다</p>
+              )}
+
+              <div className="mt-2 grid grid-cols-3 gap-2.5">
+                {SLOT_LABELS.map((slotName, i) => {
+                  const selectedIdx = picked[i];
+                  const selectedDrawn =
+                    selectedIdx !== undefined ? deck[selectedIdx] : undefined;
+
+                  return (
+                    <div
+                      key={slotName}
+                      className={`rounded-xl border p-2 flex flex-col items-center justify-between transition-all ${
+                        selectedDrawn
+                          ? 'border-gold-400/80 bg-gold-500/15 text-gold-200 shadow-sm shadow-gold-500/10'
+                          : 'border-dashed border-gold-500/35 bg-night-900/50 text-mystic-300/60'
+                      }`}
+                    >
+                      <span className="text-[10px] font-serif font-bold text-gold-300 mb-1">
+                        {slotName}
+                      </span>
+
+                      {selectedDrawn ? (
+                        <div className="w-14 sm:w-16">
+                          <TarotCardView
+                            card={selectedDrawn.card}
+                            reversed={selectedDrawn.reversed}
+                            revealed
+                            selected
+                            index={i}
+                          />
+                        </div>
+                      ) : (
+                        <div className="w-14 sm:w-16 aspect-[2/3] rounded-lg border border-gold-500/20 bg-night-950/60 flex items-center justify-center">
+                          <span className="text-[10px] text-mystic-300/40">
+                            {i + 1}번째
+                          </span>
+                        </div>
+                      )}
+
+                      <span className="mt-1 text-[10px] font-medium truncate max-w-full">
+                        {selectedDrawn
+                          ? `${selectedDrawn.card.nameKo} (${selectedDrawn.reversed ? '역' : '정'})`
+                          : '카드 대기'}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="w-full">
+              <FanSpread
+                deck={deck}
+                picked={picked}
+                disabled={revealingIndex !== null}
+                onPick={pickCard}
+              />
+            </div>
+
+            <div className="shrink-0">
+              {error && (
+                <div className="mb-2 flex items-start gap-2 rounded-xl border border-rose-400/40 bg-rose-500/10 px-3 py-2 text-xs text-rose-200">
+                  <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+                  <span>{error}</span>
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={showReading}
+                disabled={picked.length < MAX_PICKS || revealingIndex !== null}
+                className="w-full flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold bg-gradient-to-r from-gold-500 to-gold-400 text-night-950 shadow-lg shadow-gold-500/20 disabled:opacity-40 disabled:shadow-none hover:brightness-110 transition-all active:scale-[0.98]"
+              >
+                <Sparkles className="w-4 h-4" />
+                {picked.length < MAX_PICKS
+                  ? `카드 ${picked.length}/${MAX_PICKS}장 선택됨`
+                  : `${reader.name}의 해석 보기`}
+              </button>
+            </div>
+          </section>
+        )}
+
+        {/* 카드 개별 선택 시 자동 뒤집힘 및 터치 유도 창 */}
+        {revealingIndex !== null && revealingItem && (
+          <div 
+            onClick={handlePopupClick}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-night-950/85 backdrop-blur-md p-4 animate-fade-in cursor-pointer"
+          >
+            <div className="w-full max-w-xs rounded-2xl gold-border bg-night-900 p-5 text-center shadow-2xl animate-scale-up" onClick={(e) => e.stopPropagation()}>
+              <p className="text-xs text-gold-400 font-serif mb-1">
+                {revealingItem.position}
+              </p>
+              <h3 className="text-base font-bold font-serif text-gold-200 mb-3">
+                선택하신 카드
+              </h3>
+
+              <div 
+                onClick={handlePopupClick}
+                className="w-36 mx-auto mb-4 aspect-[2/3] cursor-pointer"
+              >
+                <TarotCardView
+                  card={revealingItem.card}
+                  reversed={revealingItem.reversed}
+                  revealed={revealFlipped}
+                  fit="cover"
+                />
+              </div>
+
+              {revealFlipped ? (
+                <div className="space-y-3 animate-fade-in" onClick={handlePopupClick}>
+                  <div>
+                    <p className="text-sm font-serif font-bold text-gold-200">
+                      {revealingItem.card.nameKo}
+                      {revealingItem.reversed ? ' (역방향)' : ' (정방향)'}
+                    </p>
+                    <p className="mt-1 text-xs text-mystic-300/80 leading-relaxed">
+                      {revealingItem.meaning}
+                    </p>
+                  </div>
+
+                  <p className="text-xs text-gold-400 animate-pulse pt-2 font-serif">
+                    ✨ 화면을 터치하여 카드를 슬롯에 놓아주세요 ✨
+                  </p>
+                </div>
+              ) : (
+                <p className="text-xs text-mystic-300/60 animate-pulse py-2 font-serif">
+                  카드를 확인하는 중...
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* 로딩 */}
+        {stage === 'loading' && (
+          <section className="mt-8 flex flex-col items-center animate-fade-in">
+            <div className="relative w-16 h-16 mb-4">
+              <div className="absolute inset-0 rounded-full border-2 border-gold-500/20" />
+              <div className="absolute inset-0 rounded-full border-t-2 border-gold-400 animate-spin" />
+              <Sparkles
+                className="absolute inset-0 m-auto w-7 h-7 text-gold-300 animate-pulse"
+                strokeWidth={1.2}
+              />
+            </div>
+            <p className="font-serif text-gold-300 text-base animate-pulse">
+              별들의 목소리를 듣고 있습니다...
+            </p>
+          </section>
+        )}
+
+        {/* 결과 (타로) */}
+        {stage === 'result' && (
+          <section className="mt-6 animate-fade-in-up">
+            <div className="text-center mb-6">
+              <h2 className="font-serif text-xl sm:text-2xl font-bold gold-text">
+                {reader.name}가 전하는 이야기
+              </h2>
+              <p className="mt-1.5 text-xs text-mystic-300/70 leading-relaxed">
+                &ldquo;{question.trim()}&rdquo;
+              </p>
+            </div>
+
+            <div className="flex justify-center gap-3 mb-6">
+              {revealedCards.map((drawn, i) => (
+                <div key={i} className="w-28 sm:w-32">
+                  <TarotCardView
+                    card={drawn.card}
+                    reversed={drawn.reversed}
+                    revealed
+                    label={drawn.position}
+                    index={i}
+                  />
+                </div>
+              ))}
+            </div>
+
+            <article className="rounded-2xl gold-border bg-night-900/70 backdrop-blur-sm p-5 sm:p-6 mb-4">
+              <div className="mb-4 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full overflow-hidden border border-gold-400/60 shrink-0">
+                  <img src={reader.image} alt={reader.name} className="w-full h-full object-cover" />
+                </div>
+                <div>
+                  <p className="text-[10px] text-gold-400 font-serif tracking-[0.2em]">
+                    {reader.nameEn}
+                  </p>
+                  <p className="text-sm font-bold font-serif text-gold-200">
+                    {reader.name} 점술가
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 mb-4">
+                <div className="h-px flex-1 bg-gradient-to-r from-transparent to-gold-500/40" />
+                <Moon className="w-4 h-4 text-gold-400" />
+                <div className="h-px flex-1 bg-gradient-to-l from-transparent to-gold-500/40" />
+              </div>
+              <div className="space-y-4 text-sm text-white/95 leading-[1.8] font-serif whitespace-pre-wrap">
+                {reading}
+              </div>
+            </article>
+
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={copyResult}
+                className="flex-1 flex items-center justify-center gap-2 rounded-xl py-3 text-xs sm:text-sm font-bold border border-gold-500/40 bg-night-800 text-gold-300 hover:bg-gold-500/10 transition-all"
+              >
+                {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                {copied ? '복사 완료!' : '결과 복사하기'}
+              </button>
+              <button
+                type="button"
+                onClick={goHome}
+                className="flex-1 rounded-xl py-3 text-xs sm:text-sm font-bold bg-gradient-to-r from-gold-500 to-gold-400 text-night-950 shadow-lg hover:brightness-110 transition-all"
+              >
+                다른 고민 상담하기
+              </button>
+            </div>
+          </section>
+        )}
+      </main>
+    </div>
+  );
+}
