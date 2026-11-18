@@ -700,24 +700,25 @@ export default function App() {
           </section>
         )}
 
-        {/* 카드 개별 선택 시 자동 뒤집힘 및 터치 유도 창 (카드 크기 키움 & 문구 변경) */}
+        {/* 카드 개별 선택 시 자동 뒤집힘 및 터치 유도 창 (카드 크기를 시원하게 키움) */}
         {revealingIndex !== null && revealingItem && (
           <div 
             onClick={handlePopupClick}
             className="fixed inset-0 z-50 flex items-center justify-center bg-night-950/85 backdrop-blur-md p-4 animate-fade-in cursor-pointer"
           >
-            <div className="w-full max-w-xs rounded-2xl gold-border bg-night-900 p-5 text-center shadow-2xl animate-scale-up" onClick={(e) => e.stopPropagation()}>
+            {/* 팝업 박스 크기를 max-w-sm으로 넓힘 */}
+            <div className="w-full max-w-sm rounded-2xl gold-border bg-night-900 p-6 text-center shadow-2xl animate-scale-up" onClick={(e) => e.stopPropagation()}>
               <p className="text-xs text-gold-400 font-serif mb-1">
                 {revealingItem.position}
               </p>
-              <h3 className="text-base font-bold font-serif text-gold-200 mb-3">
+              <h3 className="text-lg font-bold font-serif text-gold-200 mb-3">
                 선택하신 카드
               </h3>
 
-              {/* 카드 세로 짤림 방지 및 크기 확대: w-40과 aspect-[2/3] 적용 */}
+              {/* 카드 너비를 w-48(약 192px)로 대폭 키우고 aspect-[2/3] 비율로 세로 짤림 방지 */}
               <div 
                 onClick={handlePopupClick}
-                className="w-40 mx-auto mb-4 aspect-[2/3] cursor-pointer"
+                className="w-48 mx-auto mb-4 aspect-[2/3] cursor-pointer shadow-2xl"
               >
                 <TarotCardView
                   card={revealingItem.card}
@@ -739,7 +740,7 @@ export default function App() {
                     </p>
                   </div>
 
-                  <p className="text-xs text-gold-400 animate-pulse pt-2 font-serif">
+                  <p className="text-xs text-gold-400 animate-pulse pt-2 font-serif font-bold">
                     ✨ 화면을 터치해주세요 ✨
                   </p>
                 </div>
