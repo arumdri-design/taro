@@ -639,8 +639,9 @@ export default function App() {
                         {slotName}
                       </span>
 
+                      {/* 상단 슬롯 카드 영역: aspect-[2/3]와 relative를 적용해 찌그러짐 방지 */}
                       {selectedDrawn ? (
-                        <div className="w-14 sm:w-16">
+                        <div className="w-14 sm:w-16 aspect-[2/3] relative">
                           <TarotCardView
                             card={selectedDrawn.card}
                             reversed={selectedDrawn.reversed}
@@ -714,7 +715,7 @@ export default function App() {
                 선택하신 카드
               </h3>
 
-              {/* 핵심 수정: 부모 div에 aspect-[2/3]를 확실하게 주어 카드가 뉘어지지 않고 세로로 올바르게 서도록 함 */}
+              {/* 팝업 카드 영역: aspect-[2/3]와 w-44를 주어 찌그러짐 없이 큼직하게 표시 */}
               <div 
                 onClick={handlePopupClick}
                 className="w-44 mx-auto mb-4 aspect-[2/3] cursor-pointer shadow-2xl relative"
@@ -783,7 +784,7 @@ export default function App() {
 
             <div className="flex justify-center gap-3 mb-6">
               {revealedCards.map((drawn, i) => (
-                <div key={i} className="w-28 sm:w-32">
+                <div key={i} className="w-28 sm:w-32 aspect-[2/3] relative">
                   <TarotCardView
                     card={drawn.card}
                     reversed={drawn.reversed}
