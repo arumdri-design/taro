@@ -396,9 +396,9 @@ export default function App() {
           </section>
         )}
 
-        {/* 2단계: 카드 선택 (상단 3슬롯 배치 영역 + 하단 덱) */}
+        {/* 2단계: 카드 선택 (상단 3슬롯 바로 밑에 원형 배치) */}
         {stage === 'select' && (
-          <section className="flex flex-col justify-between h-full w-full overflow-hidden min-h-0 animate-fade-in-up">
+          <section className="flex flex-col gap-3 w-full animate-fade-in-up">
             <div className="shrink-0">
               {selectHeader(
                 `${reader.name}가 세 장의 카드를 기다립니다`,
@@ -458,8 +458,8 @@ export default function App() {
               </div>
             </div>
 
-            {/* 스크롤 없이 한 화면에 들어오는 덱 영역 */}
-            <div className="relative flex-1 min-h-0 w-full flex items-center justify-center overflow-hidden my-1">
+            {/* 선택된 3슬롯 바로 밑 원형 덱 영역 */}
+            <div className="w-full">
               <FanSpread
                 deck={deck}
                 picked={picked}
@@ -490,7 +490,7 @@ export default function App() {
             </div>
           </section>
         )}
-
+        
         {/* 로딩 */}
         {stage === 'loading' && (
           <section className="mt-8 flex flex-col items-center animate-fade-in">
