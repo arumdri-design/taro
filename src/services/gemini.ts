@@ -21,7 +21,7 @@ function getGeminiModel(apiKey: string) {
     throw new Error('Gemini API 키가 유효하지 않습니다. 설정에서 키를 확인해 주세요.');
   }
   const genAI = new GoogleGenerativeAI(trimmedKey);
-  return genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+  return genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 }
 
 // 1. 타로 해석 함수
