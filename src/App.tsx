@@ -9,6 +9,7 @@ import {
   VolumeX,
   Calendar as CalendarIcon,
   User,
+  Check,
 } from 'lucide-react';
 import Starfield from '@/components/Starfield';
 import TarotCardView from '@/components/TarotCardView';
@@ -198,14 +199,16 @@ export default function App() {
     requestAnimationFrame(() => {
       setTimeout(() => {
         setRevealFlipped(true);
-        // 애니메이션 후 자동으로 슬롯에 카드 등록
-        setTimeout(() => {
-          setPicked((prev) => (prev.includes(index) ? prev : [...prev, index]));
-          setRevealingIndex(null);
-          setRevealFlipped(false);
-        }, 500);
       }, 90);
     });
+  };
+
+  const confirmRevealedCard = () => {
+    if (revealingIndex === null) return;
+    const targetIdx = revealingIndex;
+    setRevealingIndex(null);
+    setRevealFlipped(false);
+    setPicked((prev) => (prev.includes(targetIdx) ? prev : [...prev, targetIdx]));
   };
 
   const showReading = async () => {
@@ -695,6 +698,55 @@ export default function App() {
               </button>
             </div>
           </section>
+        )}
+
+        {/* 카드 개별 선택 시 나타나는 확인/뒤집기 모달(창) */}
+        {revealingIndex !== null && revealingItem && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-night-950/80 backdrop-blur-md p-4 animate-fade-in">
+            <div className="w-full max-w-xs rounded-2xl gold-border bg-night-900 p-5 text-center shadow-2xl animate-scale-up">
+              <p className="text-xs text-gold-400 font-serif mb-1">
+                {revealingItem.position}
+              </p>
+              <h3 className="text-base font-bold font-serif text-gold-200 mb-4">
+                선택하신 카드
+              </h3>
+
+              <div className="w-32 mx-auto mb-4">
+                <TarotCardView
+                  card={revealingItem.card}
+                  reversed={revealingItem.reversed}
+                  revealed={revealFlipped}
+                  fit="cover"
+                />
+              </div>
+
+              {revealFlipped ? (
+                <div className="space-y-3 animate-fade-in">
+                  <div>
+                    <p className="text-sm font-serif font-bold text-gold-200">
+                      {revealingItem.card.nameKo}
+                      {revealingItem.reversed ? ' (역방향)' : ' (정방향)'}
+                    </p>
+                    <p className="mt-1 text-xs text-mystic-300/80 leading-relaxed">
+                      {revealingItem.meaning}
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={confirmRevealedCard}
+                    className="w-full rounded-xl py-2.5 text-xs font-bold bg-gradient-to-r from-gold-500 to-gold-400 text-night-950 shadow-md hover:brightness-110 transition-all"
+                  >
+                    이 카드 확정하기
+                  </button>
+                </div>
+              ) : (
+                <p className="text-xs text-mystic-300/60 animate-pulse py-4">
+                  카드를 뒤집고 있습니다...
+                </p>
+              )}
+            </div>
+          </div>
         )}
 
         {/* 로딩 */}
