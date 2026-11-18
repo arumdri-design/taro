@@ -38,20 +38,19 @@ export default function FanSpread({ deck, picked, disabled, onPick }: FanSpreadP
           </span>
         </div>
 
-        {/* 원형 궤도에 배치된 카드들 (12시 방향 확실한 간격 확보 및 360도 균등 분배) */}
+        {/* 12시 방향을 확실히 비우고(약 35도 간격) 325도를 균등하게 채우는 원형 배치 */}
         {validDeck.map(({ item, index }, idx) => {
           const revealed = picked.includes(index);
           const isMaxPicked = picked.length >= 3 && !revealed;
           const isLocked = Boolean(disabled || isMaxPicked || revealed);
           const isHovered = hoveredIndex === index && !isLocked;
 
-          // 12시 방향(-90도) 기준 양옆으로 약 1.5개 카드 분량의 확실한 빈 틈(gap)을 두고 배치
-          const totalSlots = Math.max(total, 1);
-          const angleSpan = Math.PI * 2 * (totalSlots / (totalSlots + 2));
-          const startAngle = -Math.PI / 2 + (Math.PI * 2 - angleSpan) / 2;
+          // 전체 360도 중 약 325도만 사용하고, 상단 12시(-90도)를 기점으로 양옆에 빈 공간 확보
+          const spreadAngle = (Math.PI * 2 * 325) / 360; 
+          const startAngle = -Math.PI / 2 - spreadAngle / 2;
           const angleRad =
-            totalSlots > 1
-              ? startAngle + (idx / (totalSlots - 1)) * angleSpan
+            total > 1
+              ? startAngle + (idx / (total - 1)) * spreadAngle
               : -Math.PI / 2;
 
           const angleDeg = (angleRad * 180) / Math.PI;
