@@ -700,7 +700,7 @@ export default function App() {
           </section>
         )}
 
-        {/* 카드 개별 선택 시 자동 뒤집힘 및 터치 유도 창 */}
+        {/* 카드 개별 선택 시 자동 뒤집힘 및 터치 유도 창 (카드 크기 키움 & 문구 변경) */}
         {revealingIndex !== null && revealingItem && (
           <div 
             onClick={handlePopupClick}
@@ -714,9 +714,10 @@ export default function App() {
                 선택하신 카드
               </h3>
 
+              {/* 카드 세로 짤림 방지 및 크기 확대: w-40과 aspect-[2/3] 적용 */}
               <div 
                 onClick={handlePopupClick}
-                className="w-36 mx-auto mb-4 aspect-[2/3] cursor-pointer"
+                className="w-40 mx-auto mb-4 aspect-[2/3] cursor-pointer"
               >
                 <TarotCardView
                   card={revealingItem.card}
@@ -739,7 +740,7 @@ export default function App() {
                   </div>
 
                   <p className="text-xs text-gold-400 animate-pulse pt-2 font-serif">
-                    ✨ 화면을 터치하여 카드를 슬롯에 놓아주세요 ✨
+                    ✨ 화면을 터치해주세요 ✨
                   </p>
                 </div>
               ) : (
