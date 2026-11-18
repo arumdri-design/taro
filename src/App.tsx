@@ -90,7 +90,7 @@ export default function App() {
   const [reader, setReader] = useState<Reader>(readers[0]);
   const bgm = useAmbientBgm();
 
-  // Vercel 서버리스 백엔드를 이용하므로 프론트엔드 키 검사 불필요
+  // 서버리스 백엔드 사용으로 프론트엔드 키 불필요
   const apiKey = 'server-managed';
 
   const revealedCards = useMemo(
@@ -198,16 +198,14 @@ export default function App() {
     requestAnimationFrame(() => {
       setTimeout(() => {
         setRevealFlipped(true);
+        // 애니메이션 후 자동으로 슬롯에 카드 등록
+        setTimeout(() => {
+          setPicked((prev) => (prev.includes(index) ? prev : [...prev, index]));
+          setRevealingIndex(null);
+          setRevealFlipped(false);
+        }, 500);
       }, 90);
     });
-  };
-
-  const confirmRevealedCard = () => {
-    if (revealingIndex === null) return;
-    const targetIdx = revealingIndex;
-    setRevealingIndex(null);
-    setRevealFlipped(false);
-    setPicked((prev) => (prev.includes(targetIdx) ? prev : [...prev, targetIdx]));
   };
 
   const showReading = async () => {
