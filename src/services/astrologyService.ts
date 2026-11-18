@@ -1,25 +1,10 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import type { Reader } from '@/data/readers';
+import type { SajuInput } from '@/data/sajuTypes';
 
-export type SajuGender = 'male' | 'female';
-export type SajuCalendar = 'solar' | 'lunar';
-
-export interface SajuInput {
-  name: string;
-  gender: SajuGender;
-  calendar: SajuCalendar;
-  birthYear: number;
-  birthMonth: number;
-  birthDay: number;
-  birthHour?: number; // 태어난 시간 (선택)
-}
-
-/**
- * 점성술 및 사주 명리 운세 풀이를 생성하는 함수
- */
 export async function getSajuReading(
   input: SajuInput,
-  reader: Reader,
+  reader: Reader, // 메인 화면에서 선택된 점술가 객체를 그대로 받음
   apiKey: string
 ): Promise<string> {
   if (!apiKey) {
@@ -27,7 +12,6 @@ export async function getSajuReading(
   }
 
   const genAI = new GoogleGenerativeAI(apiKey);
-  // 최신 모델 설정 (필요 시 gemini-1.5-flash 등으로 변경 가능)
   const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
 
   const genderText = input.gender === 'male' ? '남성' : '여성';
