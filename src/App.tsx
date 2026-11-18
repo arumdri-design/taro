@@ -21,7 +21,8 @@ import useAmbientBgm from '@/hooks/useAmbientBgm';
 import { tarotCards, type TarotCard } from '@/data/tarotCards';
 import { readers, type Reader } from '@/data/readers';
 import { getTarotReading, type DrawnCard } from '@/services/gemini';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { getSajuReading } from '@/services/astrologyService';
+import type { SajuInput, SajuGender, SajuCalendar } from '@/data/sajuTypes';
 
 type Stage =
   | 'question'
@@ -32,9 +33,6 @@ type Stage =
   | 'saju-input'
   | 'saju-loading'
   | 'saju-result';
-
-type SajuGender = 'male' | 'female';
-type SajuCalendar = 'solar' | 'lunar';
 
 const SLOT_LABELS = ['첫 번째 카드', '두 번째 카드', '세 번째 카드'] as const;
 const MAX_PICKS = 3;
@@ -73,51 +71,6 @@ function getCardBriefInfo(card: TarotCard | undefined, reversed: boolean) {
     '새로운 흐름과 내면의 신호가 교차하는 시점입니다.';
 
   return { keywords, meaning };
-}
-
-async function fetchSajuReading(
-  input: {
-    name: string;
-    gender: SajuGender;
-    calendar: SajuCalendar;
-    birthYear: number;
-    birthMonth: number;
-    birthDay: number;
-    birthHour?: number;
-  },
-  reader: Reader,
-  apiKey: string
-): Promise<string> {
-  if (!apiKey) throw new Error('Gemini API 키가 필요합니다.');
-  const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
-
-  const hourText = input.birthHour !== undefined ? `${input.birthHour}시` : '시간 미상';
-  const calendarText = input.calendar === 'solar' ? '양력' : '음력';
-  const genderText = input.gender === 'male' ? '남성' : '여성';
-
-  const prompt = `
-당신은 깊은 통찰력을 지닌 신비로운 사주 명리 및 운세 전문가이자, 밤하늘 타로 상담소의 파트너 ${reader.name}(${reader.nameEn})입니다.
-아래 내담자의 사주 정보를 바탕으로 정성스럽고 깊이 있는 사주풀이(총운, 타고난 본질, 올해의 운세, 조언)를 작성해 주세요.
-
-[내담자 사주 정보]
-- 이름: ${input.name}
-- 성별: ${genderText}
-- 생년월일: ${input.birthYear}년 ${input.birthMonth}월 ${input.birthDay}일 (${calendarText})
-- 태어난 시간: ${hourText}
-- 담당 상담가: ${reader.name} (${reader.trait})
-
-[작성 지침]
-1. 상담가의 고유한 말투와 분위기를 살려 신뢰감 있고 따뜻하게 작성해 주세요.
-2. 대괄호 형식(예: [총운과 기운], [타고난 성향과 본질], [올해의 흐름과 조언])으로 섹션을 나누어 가독성 있게 구성해 주세요.
-3. 마크다운 형식으로 풍부하고 몰입감 있게 작성해 주세요.
-`.trim();
-
-  const result = await model.generateContent(prompt);
-  const response = await result.response;
-  const text = response.text();
-  if (!text) throw new Error('응답을 생성하지 못했어요.');
-  return text;
 }
 
 export default function App() {
@@ -238,20 +191,18 @@ export default function App() {
     setStage('saju-loading');
     setError('');
 
+    const input: SajuInput = {
+      name: sajuName.trim() || '내담자',
+      gender: sajuGender,
+      calendar: sajuCalendar,
+      birthYear: y,
+      birthMonth: m,
+      birthDay: d,
+      birthHour: sajuHour === '모름' ? undefined : parseInt(sajuHour, 10),
+    };
+
     try {
-      const text = await fetchSajuReading(
-        {
-          name: sajuName.trim() || '내담자',
-          gender: sajuGender,
-          calendar: sajuCalendar,
-          birthYear: y,
-          birthMonth: m,
-          birthDay: d,
-          birthHour: sajuHour === '모름' ? undefined : parseInt(sajuHour, 10),
-        },
-        reader,
-        apiKey
-      );
+      const text = await getSajuReading(input, reader, apiKey);
       setReading(text);
       setStage('saju-result');
     } catch (err) {
@@ -338,6 +289,9 @@ export default function App() {
 
   const selectHeader = (title: string, subtitle?: React.ReactNode) => (
     <div className="flex flex-col items-center text-center mb-1 animate-fade-in">
+      <div className="w-12 h-12 rounded-full overflow-hidden border border-gold-400/60 shadow-md mb-1.5 mx-auto">
+        <img src={reader.image} alt={reader.name} className="w-full h-full object-cover" />
+      </div>
       <p className="text-[11px] text-gold-400 font-serif tracking-widest">{reader.nameEn}</p>
       <h2 className="font-serif text-base sm:text-xl font-bold text-gold-200 mt-0.5">{title}</h2>
       {subtitle && <div className="mt-0.5 text-xs text-mystic-300/80">{subtitle}</div>}
@@ -399,7 +353,7 @@ export default function App() {
       )}
 
       <main className="relative z-10 w-full max-w-lg mx-auto px-4 sm:px-6 flex-1 pb-10">
-        {/* 1단계: 점술가 선택 + 고민 입력 + 듀얼 버튼 (타로 / 사주) */}
+        {/* 1단계: 점술가 선택 + 고민 입력 + 듀얼 버튼 */}
         {stage === 'question' && (
           <section className="mt-4 animate-fade-in-up">
             <div className="relative w-full aspect-square overflow-hidden rounded-2xl border border-gold-500/35 mb-4 shadow-xl shadow-black/40">
@@ -822,13 +776,18 @@ export default function App() {
             </div>
 
             <article className="rounded-2xl gold-border bg-night-900/70 backdrop-blur-sm p-5 sm:p-6">
-              <div className="mb-4">
-                <p className="text-[10px] text-gold-400 font-serif tracking-[0.2em]">
-                  {reader.nameEn}
-                </p>
-                <p className="text-sm font-bold font-serif text-gold-200">
-                  {reader.name} 점술가
-                </p>
+              <div className="mb-4 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full overflow-hidden border border-gold-400/60 shrink-0">
+                  <img src={reader.image} alt={reader.name} className="w-full h-full object-cover" />
+                </div>
+                <div>
+                  <p className="text-[10px] text-gold-400 font-serif tracking-[0.2em]">
+                    {reader.nameEn}
+                  </p>
+                  <p className="text-sm font-bold font-serif text-gold-200">
+                    {reader.name} 점술가
+                  </p>
+                </div>
               </div>
 
               <div className="flex items-center gap-2 mb-4">
@@ -890,13 +849,18 @@ export default function App() {
             </div>
 
             <article className="rounded-2xl gold-border bg-night-900/70 backdrop-blur-sm p-5 sm:p-6">
-              <div className="mb-4">
-                <p className="text-[10px] text-gold-400 font-serif tracking-[0.2em]">
-                  {reader.nameEn}
-                </p>
-                <p className="text-sm font-bold font-serif text-gold-200">
-                  {reader.name} 전문가
-                </p>
+              <div className="mb-4 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full overflow-hidden border border-gold-400/60 shrink-0">
+                  <img src={reader.image} alt={reader.name} className="w-full h-full object-cover" />
+                </div>
+                <div>
+                  <p className="text-[10px] text-gold-400 font-serif tracking-[0.2em]">
+                    {reader.nameEn}
+                  </p>
+                  <p className="text-sm font-bold font-serif text-gold-200">
+                    {reader.name} 점술가
+                  </p>
+                </div>
               </div>
 
               <div className="flex items-center gap-2 mb-4">
