@@ -4,7 +4,7 @@ import type { SajuInput } from '@/data/sajuTypes';
 
 export async function getSajuReading(
   input: SajuInput,
-  reader: Reader, // 메인 화면에서 선택된 점술가 객체를 그대로 받음
+  reader: Reader,
   apiKey: string
 ): Promise<string> {
   if (!apiKey) {
@@ -36,19 +36,13 @@ export async function getSajuReading(
 4. 마크다운 형식으로 풍부하고 몰입감 있게 작성해 주세요.
 `.trim();
 
-  try {
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
-    
-    if (!text) {
-      throw new Error('AI로부터 운세 응답을 생성하지 못했어요.');
-    }
-    
-    return text;
-  } catch (err) {
-    throw new Error(
-      err instanceof Error ? err.message : '사주 및 운세 풀이 중 오류가 발생했어요.'
-    );
+  const result = await model.generateContent(prompt);
+  const response = await result.response;
+  const text = response.text();
+  
+  if (!text) {
+    throw new Error('AI로부터 운세 응답을 생성하지 못했어요.');
   }
+  
+  return text;
 }
