@@ -20,8 +20,7 @@ import ApiKeyModal from '@/components/ApiKeyModal';
 import useAmbientBgm from '@/hooks/useAmbientBgm';
 import { tarotCards, type TarotCard } from '@/data/tarotCards';
 import { readers, type Reader } from '@/data/readers';
-import { getTarotReading, type DrawnCard } from '@/services/gemini';
-import { getSajuReading } from '@/services/astrologyService';
+import { getTarotReading, getSajuReading, type DrawnCard } from '@/services/gemini';
 import type { SajuInput, SajuGender, SajuCalendar } from '@/data/sajuTypes';
 
 type Stage =
