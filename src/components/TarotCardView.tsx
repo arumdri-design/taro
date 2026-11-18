@@ -72,7 +72,7 @@ export default function TarotCardView({
   return (
     <Wrapper
       {...(onClick ? { type: 'button' as const, onClick, disabled } : {})}
-      className={`tarot-card relative w-full aspect-[2/3] rounded-xl transition-all duration-300 focus:outline-none ${
+      className={`tarot-card relative w-full h-full rounded-xl transition-all duration-300 focus:outline-none ${
         onClick && !disabled ? 'cursor-pointer hover:-translate-y-1' : ''
       } ${selected ? 'scale-105' : ''} ${
         disabled && !selected ? 'opacity-30' : ''
@@ -93,7 +93,7 @@ export default function TarotCardView({
       >
         {/* 뒷면 */}
         <div
-          className="tarot-card-face absolute inset-0 rounded-xl overflow-hidden border border-gold-500/40 shadow-lg shadow-black/50 bg-night-900"
+          className="tarot-card-face absolute inset-0 w-full h-full rounded-xl overflow-hidden border border-gold-500/40 shadow-lg shadow-black/50 bg-night-900"
           style={{ backfaceVisibility: 'hidden' }}
         >
           <img
@@ -112,7 +112,7 @@ export default function TarotCardView({
         {/* 앞면 */}
         {revealed && (
           <div
-            className="absolute inset-0 rounded-xl overflow-hidden border border-gold-400/60 shadow-xl bg-night-950 flex flex-col justify-between"
+            className="absolute inset-0 w-full h-full rounded-xl overflow-hidden border border-gold-400/60 shadow-xl bg-night-950 flex flex-col justify-between"
             style={{
               backfaceVisibility: 'hidden',
               transform: 'rotateY(180deg)',
