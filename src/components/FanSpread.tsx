@@ -45,7 +45,9 @@ export default function FanSpread({ deck, picked, disabled, onPick }: FanSpreadP
           const isLocked = Boolean(disabled || isMaxPicked || revealed);
           const isHovered = hoveredIndex === index && !isLocked;
 
-          const angleRad = (idx / Math.max(total, 1)) * Math.PI * 2 - Math.PI / 2;
+          const startAngle = -Math.PI / 2 + (Math.PI * 2) / (total + 2);
+          const spanAngle = Math.PI * 2 * (total / (total + 2));
+          const angleRad = startAngle + (idx / Math.max(total - 1, 1)) * spanAngle;
           const angleDeg = (angleRad * 180) / Math.PI;
           const leftPercent = 50 + radiusPercent * Math.cos(angleRad);
           const topPercent = 50 + radiusPercent * Math.sin(angleRad);
