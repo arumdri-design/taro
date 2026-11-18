@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Moon,
-  Shuffle,
   Sparkles,
   Copy,
   Home,
@@ -11,6 +10,8 @@ import {
   AlertTriangle,
   Volume2,
   VolumeX,
+  Calendar as CalendarIcon,
+  User,
 } from 'lucide-react';
 import Starfield from '@/components/Starfield';
 import TarotCardView from '@/components/TarotCardView';
@@ -20,8 +21,18 @@ import useAmbientBgm from '@/hooks/useAmbientBgm';
 import { tarotCards, type TarotCard } from '@/data/tarotCards';
 import { readers, type Reader } from '@/data/readers';
 import { getTarotReading, type DrawnCard } from '@/services/gemini';
+import { getSajuReading } from '@/services/sajuGemini';
+import type { SajuInput, SajuGender, SajuCalendar } from '@/data/sajuTypes';
 
-type Stage = 'question' | 'shuffle' | 'select' | 'loading' | 'result';
+type Stage =
+  | 'question'
+  | 'shuffle'
+  | 'select'
+  | 'loading'
+  | 'result'
+  | 'saju-input'
+  | 'saju-loading'
+  | 'saju-result';
 
 const SLOT_LABELS = ['첫 번째 카드', '두 번째 카드', '세 번째 카드'] as const;
 const MAX_PICKS = 3;
@@ -65,6 +76,16 @@ function getCardBriefInfo(card: TarotCard | undefined, reversed: boolean) {
 export default function App() {
   const [stage, setStage] = useState<Stage>('question');
   const [question, setQuestion] = useState('');
+  
+  // 사주 입력 상태
+  const [sajuName, setSajuName] = useState('');
+  const [sajuGender, setSajuGender] = useState<SajuGender>('male');
+  const [sajuCalendar, setSajuCalendar] = useState<SajuCalendar>('solar');
+  const [sajuYear, setSajuYear] = useState('1995');
+  const [sajuMonth, setSajuMonth] = useState('5');
+  const [sajuDay, setSajuDay] = useState('15');
+  const [sajuHour, setSajuHour] = useState('모름');
+
   const [deck, setDeck] = useState<DrawnCard[]>([]);
   const [picked, setPicked] = useState<number[]>([]);
   const [revealingIndex, setRevealingIndex] = useState<number | null>(null);
@@ -138,6 +159,12 @@ export default function App() {
   }, []);
 
   const beginShuffle = useCallback(() => {
+    if (!question.trim()) return;
+    try {
+      bgm.start();
+    } catch {
+      // 오디오 자동재생 제한 무시
+    }
     setStage('shuffle');
     setDeck(pickRandomCards(TOTAL_SHOWN));
     setPicked([]);
@@ -146,17 +173,53 @@ export default function App() {
     setReading('');
     setError('');
     setTimeout(() => setStage('select'), 1600);
-  }, []);
+  }, [question, bgm]);
 
-  const startShuffle = useCallback(() => {
-    if (!question.trim()) return;
+  const startSaju = useCallback(() => {
+    if (!sajuName.trim()) return;
     try {
       bgm.start();
     } catch {
-      // 오디오 자동재생 제한 무시
+      // 무시
     }
-    beginShuffle();
-  }, [question, bgm, beginShuffle]);
+    setStage('saju-input');
+  }, [sajuName, bgm]);
+
+  const submitSaju = async () => {
+    const y = parseInt(sajuYear, 10);
+    const m = parseInt(sajuMonth, 10);
+    const d = parseInt(sajuDay, 10);
+    if (!y || !m || !d) {
+      setError('올바른 생년월일을 입력해 주세요.');
+      return;
+    }
+    if (!apiKey) {
+      setKeyModalOpen(true);
+      return;
+    }
+
+    setStage('saju-loading');
+    setError('');
+
+    const input: SajuInput = {
+      name: sajuName.trim(),
+      gender: sajuGender,
+      calendar: sajuCalendar,
+      birthYear: y,
+      birthMonth: m,
+      birthDay: d,
+      birthHour: sajuHour === '모름' ? undefined : parseInt(sajuHour, 10),
+    };
+
+    try {
+      const text = await getSajuReading(input, reader, apiKey);
+      setReading(text);
+      setStage('saju-result');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '알 수 없는 오류가 발생했어요.');
+      setStage('saju-input');
+    }
+  };
 
   const pickCard = (index: number) => {
     if (
@@ -249,7 +312,7 @@ export default function App() {
 
       {/* 헤더 */}
       <header className="relative z-10 flex items-center justify-between px-4 pt-3 sm:px-6 sm:pt-5 w-full max-w-lg mx-auto shrink-0">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 cursor-pointer" onClick={goHome}>
           <Moon className="w-5 h-5 text-gold-400" />
           <span className="font-serif font-bold text-gold-200 text-sm sm:text-base">
             밤하늘 타로 상담소
@@ -297,7 +360,7 @@ export default function App() {
       )}
 
       <main className="relative z-10 w-full max-w-lg mx-auto px-4 sm:px-6 flex-1 pb-10">
-        {/* 1단계: 점술가 선택 + 고민 입력 */}
+        {/* 1단계: 점술가 선택 + 고민 입력 + 듀얼 버튼 (타로 / 사주) */}
         {stage === 'question' && (
           <section className="mt-4 animate-fade-in-up">
             <div className="relative w-full aspect-square overflow-hidden rounded-2xl border border-gold-500/35 mb-4 shadow-xl shadow-black/40">
@@ -335,14 +398,19 @@ export default function App() {
             <div className="rounded-2xl gold-border bg-night-900/70 backdrop-blur-sm p-3">
               <div className="flex items-center justify-between mb-1.5">
                 <label className="block text-xs text-gold-400 font-serif">
-                  오늘의 고민
+                  오늘의 고민 및 이름
                 </label>
                 <span className="text-[10px] text-mystic-300/50">{question.length}/500</span>
               </div>
               <textarea
                 value={question}
-                onChange={(e) => setQuestion(e.target.value)}
-                placeholder="예: 요즘 연애운이 궁금해요. 좋은 인연이 있을까요?"
+                onChange={(e) => {
+                  setQuestion(e.target.value);
+                  if (!sajuName && e.target.value.trim()) {
+                    setSajuName(e.target.value.trim().slice(0, 10));
+                  }
+                }}
+                placeholder="예: 요즘 연애운이 궁금해요. 좋은 인연이 있을까요? (사주 입력 시 이름으로도 활용돼요)"
                 rows={2}
                 maxLength={500}
                 className="w-full resize-none rounded-xl bg-night-800 border border-gold-500/25 px-3 py-2 text-xs sm:text-sm text-gold-100 placeholder:text-mystic-300/40 leading-snug focus:outline-none focus:border-gold-400 transition-colors"
@@ -360,15 +428,180 @@ export default function App() {
                 ))}
               </div>
 
-              <button
-                type="button"
-                onClick={startShuffle}
-                disabled={!question.trim()}
-                className="w-full flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold bg-gradient-to-r from-gold-500 to-gold-400 text-night-950 shadow-lg shadow-gold-500/20 disabled:opacity-40 disabled:shadow-none hover:shadow-gold-400/30 hover:brightness-110 transition-all active:scale-[0.98]"
-              >
-                <Shuffle className="w-4 h-4" />
-                카드 셔플하기
-              </button>
+              {/* 하단 동일 크기 듀얼 버튼 */}
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={beginShuffle}
+                  disabled={!question.trim()}
+                  className="flex items-center justify-center gap-1.5 rounded-xl py-3 text-xs sm:text-sm font-bold bg-gradient-to-r from-gold-500 to-gold-400 text-night-950 shadow-lg shadow-gold-500/20 disabled:opacity-40 disabled:shadow-none hover:brightness-110 transition-all active:scale-[0.98]"
+                >
+                  <Sparkles className="w-4 h-4 shrink-0" />
+                  타로카드로 확인하기
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (question.trim() && !sajuName) setSajuName(question.trim().slice(0, 10));
+                    setStage('saju-input');
+                  }}
+                  className="flex items-center justify-center gap-1.5 rounded-xl py-3 text-xs sm:text-sm font-bold border border-gold-500/50 bg-night-800 text-gold-300 shadow-lg hover:bg-gold-500/10 transition-all active:scale-[0.98]"
+                >
+                  <CalendarIcon className="w-4 h-4 shrink-0" />
+                  사주팔자로 알아보기
+                </button>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* 사주 정보 입력 단계 */}
+        {stage === 'saju-input' && (
+          <section className="mt-4 animate-fade-in-up">
+            {selectHeader(
+              `${reader.name}가 사주 명식을 살핍니다`,
+              <p>생년월일과 정보를 입력해 주세요</p>
+            )}
+
+            <div className="mt-4 rounded-2xl gold-border bg-night-900/80 backdrop-blur-sm p-4 space-y-4">
+              <div>
+                <label className="block text-xs text-gold-400 font-serif mb-1">성함 (또는 닉네임)</label>
+                <div className="relative flex items-center">
+                  <User className="absolute left-3 w-4 h-4 text-gold-400/60" />
+                  <input
+                    type="text"
+                    value={sajuName}
+                    onChange={(e) => setSajuName(e.target.value)}
+                    placeholder="이름을 입력하세요"
+                    className="w-full rounded-xl bg-night-800 border border-gold-500/25 pl-9 pr-3 py-2.5 text-xs sm:text-sm text-gold-100 placeholder:text-mystic-300/40 focus:outline-none focus:border-gold-400"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs text-gold-400 font-serif mb-1">성별</label>
+                  <div className="grid grid-cols-2 gap-1.5 bg-night-800 p-1 rounded-xl border border-gold-500/25">
+                    <button
+                      type="button"
+                      onClick={() => setSajuGender('male')}
+                      className={`py-1.5 text-xs font-serif rounded-lg transition-colors ${
+                        sajuGender === 'male' ? 'bg-gold-500 text-night-950 font-bold' : 'text-mystic-300'
+                      }`}
+                    >
+                      남성
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSajuGender('female')}
+                      className={`py-1.5 text-xs font-serif rounded-lg transition-colors ${
+                        sajuGender === 'female' ? 'bg-gold-500 text-night-950 font-bold' : 'text-mystic-300'
+                      }`}
+                    >
+                      여성
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs text-gold-400 font-serif mb-1">양/음력</label>
+                  <div className="grid grid-cols-2 gap-1.5 bg-night-800 p-1 rounded-xl border border-gold-500/25">
+                    <button
+                      type="button"
+                      onClick={() => setSajuCalendar('solar')}
+                      className={`py-1.5 text-xs font-serif rounded-lg transition-colors ${
+                        sajuCalendar === 'solar' ? 'bg-gold-500 text-night-950 font-bold' : 'text-mystic-300'
+                      }`}
+                    >
+                      양력
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSajuCalendar('lunar')}
+                      className={`py-1.5 text-xs font-serif rounded-lg transition-colors ${
+                        sajuCalendar === 'lunar' ? 'bg-gold-500 text-night-950 font-bold' : 'text-mystic-300'
+                      }`}
+                    >
+                      음력
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs text-gold-400 font-serif mb-1">생년월일</label>
+                <div className="grid grid-cols-3 gap-2">
+                  <input
+                    type="number"
+                    value={sajuYear}
+                    onChange={(e) => setSajuYear(e.target.value)}
+                    placeholder="년도 (예: 1995)"
+                    className="rounded-xl bg-night-800 border border-gold-500/25 px-3 py-2 text-xs text-gold-100 focus:outline-none focus:border-gold-400 text-center"
+                  />
+                  <input
+                    type="number"
+                    value={sajuMonth}
+                    onChange={(e) => setSajuMonth(e.target.value)}
+                    placeholder="월"
+                    className="rounded-xl bg-night-800 border border-gold-500/25 px-3 py-2 text-xs text-gold-100 focus:outline-none focus:border-gold-400 text-center"
+                  />
+                  <input
+                    type="number"
+                    value={sajuDay}
+                    onChange={(e) => setSajuDay(e.target.value)}
+                    placeholder="일"
+                    className="rounded-xl bg-night-800 border border-gold-500/25 px-3 py-2 text-xs text-gold-100 focus:outline-none focus:border-gold-400 text-center"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs text-gold-400 font-serif mb-1">태어난 시간</label>
+                <select
+                  value={sajuHour}
+                  onChange={(e) => setSajuHour(e.target.value)}
+                  className="w-full rounded-xl bg-night-800 border border-gold-500/25 px-3 py-2.5 text-xs text-gold-100 focus:outline-none focus:border-gold-400"
+                >
+                  <option value="모름">시간 모름 (또는 무관)</option>
+                  <option value="0">자시 (23:30 ~ 01:29)</option>
+                  <option value="2">축시 (01:30 ~ 03:29)</option>
+                  <option value="4">인시 (03:30 ~ 05:29)</option>
+                  <option value="6">묘시 (05:30 ~ 07:29)</option>
+                  <option value="8">진시 (07:30 ~ 09:29)</option>
+                  <option value="10">사시 (09:30 ~ 11:29)</option>
+                  <option value="12">오시 (11:30 ~ 13:29)</option>
+                  <option value="14">미시 (13:30 ~ 15:29)</option>
+                  <option value="16">신시 (15:30 ~ 17:29)</option>
+                  <option value="18">유시 (17:30 ~ 19:29)</option>
+                  <option value="20">술시 (19:30 ~ 21:29)</option>
+                  <option value="22">해시 (21:30 ~ 23:29)</option>
+                </select>
+              </div>
+
+              {error && (
+                <div className="flex items-start gap-2 rounded-xl border border-rose-400/40 bg-rose-500/10 px-3 py-2 text-xs text-rose-200">
+                  <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+                  <span>{error}</span>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={goHome}
+                  className="rounded-xl py-3 text-xs font-bold border border-gold-500/40 bg-night-800 text-gold-300 hover:bg-gold-500/10 transition-all"
+                >
+                  돌아가기
+                </button>
+                <button
+                  type="button"
+                  onClick={submitSaju}
+                  disabled={!sajuName.trim()}
+                  className="rounded-xl py-3 text-xs font-bold bg-gradient-to-r from-gold-500 to-gold-400 text-night-950 shadow-lg shadow-gold-500/20 disabled:opacity-40 hover:brightness-110 transition-all"
+                >
+                  사주 풀이 보기
+                </button>
+              </div>
             </div>
           </section>
         )}
@@ -393,6 +626,26 @@ export default function App() {
             </div>
             <p className="font-serif text-gold-300 text-sm animate-pulse">
               카드를 섞고 있어요...
+            </p>
+          </section>
+        )}
+
+        {/* 사주 로딩 중 */}
+        {stage === 'saju-loading' && (
+          <section className="mt-20 sm:mt-28 flex flex-col items-center animate-fade-in">
+            <div className="relative w-16 h-16 mb-4">
+              <div className="absolute inset-0 rounded-full border-2 border-gold-500/20" />
+              <div className="absolute inset-0 rounded-full border-t-2 border-gold-400 animate-spin" />
+              <CalendarIcon
+                className="absolute inset-0 m-auto w-7 h-7 text-gold-300 animate-pulse"
+                strokeWidth={1.2}
+              />
+            </div>
+            <p className="font-serif text-gold-300 text-base animate-pulse">
+              사주 명식을 분석하고 있습니다...
+            </p>
+            <p className="mt-2 text-xs text-mystic-300/60">
+              {reader.name}가 타고난 기운과 운명을 풀이하고 있어요
             </p>
           </section>
         )}
@@ -508,7 +761,7 @@ export default function App() {
           </section>
         )}
 
-        {/* 4단계: 결과 */}
+        {/* 4단계: 결과 (타로) */}
         {stage === 'result' && (
           <section className="mt-6 animate-fade-in-up">
             <div className="text-center mb-6">
@@ -592,9 +845,77 @@ export default function App() {
             </div>
           </section>
         )}
+
+        {/* 사주 결과 화면 */}
+        {stage === 'saju-result' && (
+          <section className="mt-6 animate-fade-in-up">
+            <div className="text-center mb-6">
+              <h2 className="font-serif text-xl sm:text-2xl font-bold gold-text">
+                {sajuName}님의 사주 명식 풀이
+              </h2>
+              <p className="mt-1.5 text-xs text-mystic-300/70 leading-relaxed">
+                {reader.name} 명리 전문가가 분석한 운명의 지도입니다
+              </p>
+            </div>
+
+            <article className="rounded-2xl gold-border bg-night-900/70 backdrop-blur-sm p-5 sm:p-6">
+              <div className="mb-4">
+                <p className="text-[10px] text-gold-400 font-serif tracking-[0.2em]">
+                  {reader.nameEn}
+                </p>
+                <p className="text-sm font-bold font-serif text-gold-200">
+                  {reader.name} 전문가
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 mb-4">
+                <div className="h-px flex-1 bg-gradient-to-r from-transparent to-gold-500/40" />
+                <CalendarIcon className="w-4 h-4 text-gold-400" />
+                <div className="h-px flex-1 bg-gradient-to-l from-transparent to-gold-500/40" />
+              </div>
+              <div className="space-y-4 text-sm text-white/95 leading-[1.8] font-serif whitespace-pre-wrap">
+                {reading.split(/(\[[^\]]+\])/g).map((chunk, i) =>
+                  chunk.startsWith('[') && chunk.endsWith(']') ? (
+                    <p
+                      key={i}
+                      className="pt-2 font-bold text-gold-300 text-base tracking-wide"
+                    >
+                      {chunk.slice(1, -1)}
+                    </p>
+                  ) : (
+                    chunk.trim() && <p key={i}>{chunk.trim()}</p>
+                  )
+                )}
+              </div>
+            </article>
+
+            <div className="mt-6 grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={goHome}
+                className="flex items-center justify-center gap-2 rounded-xl py-3.5 text-sm font-bold border border-gold-500/40 bg-night-800/60 text-gold-300 hover:bg-gold-500/10 transition-all active:scale-[0.98]"
+              >
+                <Home className="w-4 h-4" />
+                홈으로 가기
+              </button>
+              <button
+                type="button"
+                onClick={copyResult}
+                className={`flex items-center justify-center gap-2 rounded-xl py-3.5 text-sm font-bold bg-gradient-to-r transition-all active:scale-[0.98] ${
+                  copied
+                    ? 'from-emerald-500 to-emerald-400 text-night-950'
+                    : 'from-gold-500 to-gold-400 text-night-950 hover:brightness-110'
+                }`}
+              >
+                {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                {copied ? '복사 완료!' : '결과 복사하기'}
+              </button>
+            </div>
+          </section>
+        )}
       </main>
 
-      {stage !== 'select' && (
+      {stage !== 'select' && stage !== 'saju-input' && (
         <footer className="relative z-10 w-full max-w-lg mx-auto px-4 pb-6 sm:px-6 shrink-0">
           <div
             aria-label="배너 광고"
