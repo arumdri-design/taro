@@ -7,12 +7,17 @@ export async function getSajuReading(
   reader: Reader,
   apiKey: string
 ): Promise<string> {
-  if (!apiKey || typeof apiKey !== 'string') {
-    throw new Error('Gemini API 키가 올바르지 않습니다.');
+  const trimmedKey = typeof apiKey === 'string' ? apiKey.trim() : '';
+  if (!trimmedKey) {
+    throw new Error('Gemini API 키가 유효하지 않습니다. 설정에서 키를 확인해 주세요.');
+  }
+
+  if (!input || !input.name || !input.birthYear) {
+    throw new Error('사주 입력 정보가 올바르지 않습니다.');
   }
 
   try {
-    const genAI = new GoogleGenerativeAI(apiKey);
+    const genAI = new GoogleGenerativeAI(trimmedKey);
     const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
 
     const genderText = input.gender === 'male' ? '남성' : '여성';
@@ -41,8 +46,8 @@ export async function getSajuReading(
     const response = await result.response;
     const text = response.text();
 
-    if (!text) {
-      throw new Error('AI로부터 응답을 받지 못했습니다.');
+    if (!text || typeof text !== 'string') {
+      throw new Error('AI로부터 유효한 운세 응답을 받지 못했습니다.');
     }
 
     return text;
@@ -50,6 +55,6 @@ export async function getSajuReading(
     if (err instanceof Error) {
       throw new Error(err.message);
     }
-    throw new Error('사주 및 운세 풀이 중 알 수 없는 오류가 발생했습니다.');
+    throw new Error('사주 및 운세 풀이 중 알 수 없는 시스템 오류가 발생했습니다.');
   }
 }
