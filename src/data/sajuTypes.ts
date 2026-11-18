@@ -1,5 +1,5 @@
 export type SajuGender = 'male' | 'female';
-export type SajuCalendar = 'solar' | 'lunar';
+export type SajuCalendar = 'kai' | 'lunar';
 
 export interface SajuInput {
   name: string;
@@ -8,5 +8,5 @@ export interface SajuInput {
   birthYear: number;
   birthMonth: number;
   birthDay: number;
-  birthHour?: number; // 모를 경우 선택 안 함
+  birthHour?: number;
 }
