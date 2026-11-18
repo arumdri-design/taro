@@ -195,20 +195,18 @@ export default function App() {
 
     setRevealFlipped(false);
     setRevealingIndex(index);
-
-    requestAnimationFrame(() => {
-      setTimeout(() => {
-        setRevealFlipped(true);
-      }, 90);
-    });
   };
 
-  const confirmRevealedCard = () => {
-    if (revealingIndex === null) return;
-    const targetIdx = revealingIndex;
-    setRevealingIndex(null);
-    setRevealFlipped(false);
-    setPicked((prev) => (prev.includes(targetIdx) ? prev : [...prev, targetIdx]));
+  // 팝업 창 영역을 터치하거나 클릭했을 때 카드가 뒤집히고 등록되도록 처리
+  const handleRevealClick = () => {
+    if (!revealFlipped) {
+      setRevealFlipped(true);
+    } else if (revealingIndex !== null) {
+      const targetIdx = revealingIndex;
+      setRevealingIndex(null);
+      setRevealFlipped(false);
+      setPicked((prev) => (prev.includes(targetIdx) ? prev : [...prev, targetIdx]));
+    }
   };
 
   const showReading = async () => {
@@ -700,18 +698,25 @@ export default function App() {
           </section>
         )}
 
-        {/* 카드 개별 선택 시 나타나는 확인/뒤집기 모달(창) */}
+        {/* 카드 개별 선택 시 나타나는 확인/뒤집기 모달(창) - 카드 비율 고정 및 터치 안내 적용 */}
         {revealingIndex !== null && revealingItem && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-night-950/80 backdrop-blur-md p-4 animate-fade-in">
-            <div className="w-full max-w-xs rounded-2xl gold-border bg-night-900 p-5 text-center shadow-2xl animate-scale-up">
+          <div 
+            onClick={handleRevealClick}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-night-950/85 backdrop-blur-md p-4 animate-fade-in cursor-pointer"
+          >
+            <div className="w-full max-w-xs rounded-2xl gold-border bg-night-900 p-5 text-center shadow-2xl animate-scale-up" onClick={(e) => e.stopPropagation()}>
               <p className="text-xs text-gold-400 font-serif mb-1">
                 {revealingItem.position}
               </p>
-              <h3 className="text-base font-bold font-serif text-gold-200 mb-4">
+              <h3 className="text-base font-bold font-serif text-gold-200 mb-3">
                 선택하신 카드
               </h3>
 
-              <div className="w-32 mx-auto mb-4">
+              {/* 카드 세로 짤림 방지: w-28 대신 w-36 및 aspect-[2/3] 보장 */}
+              <div 
+                onClick={handleRevealClick}
+                className="w-36 mx-auto mb-4 aspect-[2/3] cursor-pointer"
+              >
                 <TarotCardView
                   card={revealingItem.card}
                   reversed={revealingItem.reversed}
@@ -734,15 +739,18 @@ export default function App() {
 
                   <button
                     type="button"
-                    onClick={confirmRevealedCard}
+                    onClick={handleRevealClick}
                     className="w-full rounded-xl py-2.5 text-xs font-bold bg-gradient-to-r from-gold-500 to-gold-400 text-night-950 shadow-md hover:brightness-110 transition-all"
                   >
-                    이 카드 확정하기
+                    확인하기
                   </button>
                 </div>
               ) : (
-                <p className="text-xs text-mystic-300/60 animate-pulse py-4">
-                  카드를 뒤집고 있습니다...
+                <p 
+                  onClick={handleRevealClick}
+                  className="text-xs text-gold-300 animate-pulse py-2 cursor-pointer font-serif"
+                >
+                  ✨ 화면을 터치하여 카드를 뒤집어주세요 ✨
                 </p>
               )}
             </div>
