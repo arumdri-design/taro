@@ -35,7 +35,11 @@ function buildCandidatePaths(card: TarotCard): string[] {
     candidates.push(
       `/cards/${suit}-${paddedMinor}.png`,
       `/cards/${suit}_${paddedMinor}.png`,
-      `/images/cards/${suit}-${paddedMinor}.png`
+      `/images/cards/s-uits-${paddedMinor}.png`,
+      `/images/cards/major-${paddedId}.png`,
+      `/images/cards/${paddedId}.png`,
+      `/images/cards/${suit}-${paddedMinor}.png`,
+      `/images/cards/${suit}_${paddedMinor}.png`
     );
   }
 
@@ -72,7 +76,7 @@ export default function TarotCardView({
   return (
     <Wrapper
       {...(onClick ? { type: 'button' as const, onClick, disabled } : {})}
-      className={`tarot-card relative w-full h-full rounded-xl transition-all duration-300 focus:outline-none ${
+      className={`tarot-card relative w-full aspect-[2/3] rounded-xl transition-all duration-300 focus:outline-none ${
         onClick && !disabled ? 'cursor-pointer hover:-translate-y-1' : ''
       } ${selected ? 'scale-105' : ''} ${
         disabled && !selected ? 'opacity-30' : ''
@@ -85,7 +89,7 @@ export default function TarotCardView({
       }
     >
       <div
-        className="tarot-card-inner relative w-full h-full transition-transform duration-500"
+        className="tarot-card-inner absolute inset-0 w-full h-full transition-transform duration-500"
         style={{
           transformStyle: 'preserve-3d',
           transform: revealed ? 'rotateY(180deg)' : 'rotateY(0deg)',
