@@ -707,19 +707,25 @@ export default function App() {
             onClick={handlePopupClick}
             className="fixed inset-0 z-50 flex items-center justify-center bg-night-950/85 backdrop-blur-md p-4 animate-fade-in cursor-pointer"
           >
-            {/* 팝업 박스 너비를 max-w-xs로 모아주고 내부 패딩을 조절 */}
-            <div className="w-full max-w-xs rounded-2xl gold-border bg-night-900 p-5 text-center shadow-2xl animate-scale-up" onClick={(e) => e.stopPropagation()}>
-              <p className="text-xs text-gold-400 font-serif mb-1">
+            {/* 카드 개별 선택 시 자동 뒤집힘 및 터치 유도 창 (카드 크기 극대화) */}
+        {revealingIndex !== null && revealingItem && (
+          <div 
+            onClick={handlePopupClick}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-night-950/85 backdrop-blur-md p-4 animate-fade-in cursor-pointer"
+          >
+            {/* 팝업 박스 자체의 최대 너비를 max-w-xs로 모아주고 패딩을 슬림하게 조정 */}
+            <div className="w-full max-w-xs rounded-2xl gold-border bg-night-900 p-4 text-center shadow-2xl animate-scale-up" onClick={(e) => e.stopPropagation()}>
+              <p className="text-xs text-gold-400 font-serif mb-0.5">
                 {revealingItem.position}
               </p>
-              <h3 className="text-base font-bold font-serif text-gold-200 mb-2.5">
+              <h3 className="text-base font-bold font-serif text-gold-200 mb-2">
                 선택하신 카드
               </h3>
 
-              {/* 핵심 수정: 카드 너비를 w-52(약 208px)로 크게 키우고 aspect-[2/3.5]로 세로 비율과 공간 확보 */}
+              {/* 핵심 수정: 카드 너비를 w-56(약 224px)으로 대폭 키워 가로 여백을 없애고 시원하게 꽉 채움 */}
               <div 
                 onClick={handlePopupClick}
-                className="w-52 mx-auto mb-3.5 aspect-[2/3.5] cursor-pointer shadow-2xl relative"
+                className="w-56 mx-auto mb-3 aspect-[2/3] cursor-pointer shadow-2xl relative"
               >
                 <TarotCardView
                   card={revealingItem.card}
@@ -730,7 +736,7 @@ export default function App() {
               </div>
 
               {revealFlipped ? (
-                <div className="space-y-2.5 animate-fade-in" onClick={handlePopupClick}>
+                <div className="space-y-2 animate-fade-in" onClick={handlePopupClick}>
                   <div>
                     <p className="text-sm font-serif font-bold text-gold-200">
                       {revealingItem.card.nameKo}
@@ -741,7 +747,7 @@ export default function App() {
                     </p>
                   </div>
 
-                  <p className="text-xs text-gold-400 animate-pulse pt-1.5 font-serif font-bold">
+                  <p className="text-xs text-gold-400 animate-pulse pt-1 font-serif font-bold">
                     ✨ 화면을 터치해주세요 ✨
                   </p>
                 </div>
