@@ -716,10 +716,10 @@ export default function App() {
                 선택하신 카드
               </h3>
 
-              {/* 핵심 수정: 카드 너비를 w-52(약 208px)로 크게 키우고 aspect-[2/3]로 세로 비율과 공간 확보 */}
+              {/* 핵심 수정: 카드 너비를 w-52(약 208px)로 크게 키우고 aspect-[2/3.5]로 세로 비율과 공간 확보 */}
               <div 
                 onClick={handlePopupClick}
-                className="w-52 mx-auto mb-3.5 aspect-[2/3] cursor-pointer shadow-2xl relative"
+                className="w-52 mx-auto mb-3.5 aspect-[2/3.5] cursor-pointer shadow-2xl relative"
               >
                 <TarotCardView
                   card={revealingItem.card}
