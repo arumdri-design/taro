@@ -38,14 +38,13 @@ export default function FanSpread({ deck, picked, disabled, onPick }: FanSpreadP
           </span>
         </div>
 
-        {/* 원형 궤도에 배치된 카드들 */}
+        {/* 원형 궤도에 배치된 카드들 (시작과 끝이 겹치지 않도록 idx / total로 360도 균등 배치) */}
         {validDeck.map(({ item, index }, idx) => {
           const revealed = picked.includes(index);
           const isMaxPicked = picked.length >= 3 && !revealed;
           const isLocked = Boolean(disabled || isMaxPicked || revealed);
           const isHovered = hoveredIndex === index && !isLocked;
 
-          // 12시 방향(-90도)부터 시계 방향으로 360도 균등 분배
           const angleRad = (idx / Math.max(total, 1)) * Math.PI * 2 - Math.PI / 2;
           const angleDeg = (angleRad * 180) / Math.PI;
           const leftPercent = 50 + radiusPercent * Math.cos(angleRad);
