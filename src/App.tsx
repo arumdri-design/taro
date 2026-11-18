@@ -182,6 +182,7 @@ export default function App() {
     }
   };
 
+  // 카드를 누르면 즉시 팝업이 뜨고, 숏타임 뒤에 자동으로 뒤집히도록 연출
   const pickCard = (index: number) => {
     if (
       stage !== 'select' ||
@@ -195,13 +196,18 @@ export default function App() {
 
     setRevealFlipped(false);
     setRevealingIndex(index);
+
+    // 살짝 딜레이 후 카드가 자연스럽게 뒤집힘
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        setRevealFlipped(true);
+      }, 100);
+    });
   };
 
-  // 팝업 창 영역을 터치하거나 클릭했을 때 카드가 뒤집히고 등록되도록 처리
-  const handleRevealClick = () => {
-    if (!revealFlipped) {
-      setRevealFlipped(true);
-    } else if (revealingIndex !== null) {
+  // 팝업창을 터치했을 때 이미 뒤집혀 있는 상태라면 창이 닫히며 슬롯으로 장착
+  const handlePopupClick = () => {
+    if (revealFlipped && revealingIndex !== null) {
       const targetIdx = revealingIndex;
       setRevealingIndex(null);
       setRevealFlipped(false);
@@ -698,10 +704,10 @@ export default function App() {
           </section>
         )}
 
-        {/* 카드 개별 선택 시 나타나는 확인/뒤집기 모달(창) - 카드 비율 고정 및 터치 안내 적용 */}
+        {/* 카드 개별 선택 시 자동 뒤집힘 및 터치 유도 창 */}
         {revealingIndex !== null && revealingItem && (
           <div 
-            onClick={handleRevealClick}
+            onClick={handlePopupClick}
             className="fixed inset-0 z-50 flex items-center justify-center bg-night-950/85 backdrop-blur-md p-4 animate-fade-in cursor-pointer"
           >
             <div className="w-full max-w-xs rounded-2xl gold-border bg-night-900 p-5 text-center shadow-2xl animate-scale-up" onClick={(e) => e.stopPropagation()}>
@@ -712,9 +718,9 @@ export default function App() {
                 선택하신 카드
               </h3>
 
-              {/* 카드 세로 짤림 방지: w-28 대신 w-36 및 aspect-[2/3] 보장 */}
+              {/* 카드 세로 짤림 방지: 넉넉한 w-36과 aspect-[2/3] 적용 */}
               <div 
-                onClick={handleRevealClick}
+                onClick={handlePopupClick}
                 className="w-36 mx-auto mb-4 aspect-[2/3] cursor-pointer"
               >
                 <TarotCardView
@@ -726,7 +732,7 @@ export default function App() {
               </div>
 
               {revealFlipped ? (
-                <div className="space-y-3 animate-fade-in">
+                <div className="space-y-3 animate-fade-in" onClick={handlePopupClick}>
                   <div>
                     <p className="text-sm font-serif font-bold text-gold-200">
                       {revealingItem.card.nameKo}
@@ -737,20 +743,13 @@ export default function App() {
                     </p>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={handleRevealClick}
-                    className="w-full rounded-xl py-2.5 text-xs font-bold bg-gradient-to-r from-gold-500 to-gold-400 text-night-950 shadow-md hover:brightness-110 transition-all"
-                  >
-                    확인하기
-                  </button>
+                  <p className="text-xs text-gold-400 animate-pulse pt-2 font-serif">
+                    ✨ 화면을 터치하여 카드를 슬롯에 놓아주세요 ✨
+                  </p>
                 </div>
               ) : (
-                <p 
-                  onClick={handleRevealClick}
-                  className="text-xs text-gold-300 animate-pulse py-2 cursor-pointer font-serif"
-                >
-                  ✨ 화면을 터치하여 카드를 뒤집어주세요 ✨
+                <p className="text-xs text-mystic-300/60 animate-pulse py-2 font-serif">
+                  카드를 확인하는 중...
                 </p>
               )}
             </div>
@@ -802,49 +801,4 @@ export default function App() {
 
             <article className="rounded-2xl gold-border bg-night-900/70 backdrop-blur-sm p-5 sm:p-6 mb-4">
               <div className="mb-4 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full overflow-hidden border border-gold-400/60 shrink-0">
-                  <img src={reader.image} alt={reader.name} className="w-full h-full object-cover" />
-                </div>
-                <div>
-                  <p className="text-[10px] text-gold-400 font-serif tracking-[0.2em]">
-                    {reader.nameEn}
-                  </p>
-                  <p className="text-sm font-bold font-serif text-gold-200">
-                    {reader.name} 점술가
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 mb-4">
-                <div className="h-px flex-1 bg-gradient-to-r from-transparent to-gold-500/40" />
-                <Moon className="w-4 h-4 text-gold-400" />
-                <div className="h-px flex-1 bg-gradient-to-l from-transparent to-gold-500/40" />
-              </div>
-              <div className="space-y-4 text-sm text-white/95 leading-[1.8] font-serif whitespace-pre-wrap">
-                {reading}
-              </div>
-            </article>
-
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={copyResult}
-                className="flex-1 flex items-center justify-center gap-2 rounded-xl py-3 text-xs sm:text-sm font-bold border border-gold-500/40 bg-night-800 text-gold-300 hover:bg-gold-500/10 transition-all"
-              >
-                {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
-                {copied ? '복사 완료!' : '결과 복사하기'}
-              </button>
-              <button
-                type="button"
-                onClick={goHome}
-                className="flex-1 rounded-xl py-3 text-xs sm:text-sm font-bold bg-gradient-to-r from-gold-500 to-gold-400 text-night-950 shadow-lg hover:brightness-110 transition-all"
-              >
-                다른 고민 상담하기
-              </button>
-            </div>
-          </section>
-        )}
-      </main>
-    </div>
-  );
-}
+                <div className="w-10 h-10 rounded-full overflow-hidden border
