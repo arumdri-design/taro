@@ -3,10 +3,7 @@ import {
   Moon,
   Sparkles,
   Copy,
-  Home,
   Settings,
-  Check,
-  Star,
   AlertTriangle,
   Volume2,
   VolumeX,
@@ -16,7 +13,6 @@ import {
 import Starfield from '@/components/Starfield';
 import TarotCardView from '@/components/TarotCardView';
 import FanSpread from '@/components/FanSpread';
-import ApiKeyModal from '@/components/ApiKeyModal';
 import useAmbientBgm from '@/hooks/useAmbientBgm';
 import { tarotCards, type TarotCard } from '@/data/tarotCards';
 import { readers, type Reader } from '@/data/readers';
@@ -36,7 +32,6 @@ type Stage =
 const SLOT_LABELS = ['첫 번째 카드', '두 번째 카드', '세 번째 카드'] as const;
 const MAX_PICKS = 3;
 const TOTAL_SHOWN = Math.min(78, tarotCards.length);
-const STORAGE_KEY = 'tarot-gemini-key';
 
 function pickRandomCards(count: number): DrawnCard[] {
   const pool = [...tarotCards];
@@ -92,31 +87,11 @@ export default function App() {
   const [reading, setReading] = useState('');
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
-  const [keyModalOpen, setKeyModalOpen] = useState(false);
-  const [manualKey, setManualKey] = useState('');
   const [reader, setReader] = useState<Reader>(readers[0]);
   const bgm = useAmbientBgm();
 
-  const envKey = import.meta.env.VITE_GEMINI_API_KEY as string | undefined;
-  const apiKey = manualKey || envKey || '';
-
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) setManualKey(saved);
-    } catch {
-      // 무시
-    }
-  }, []);
-
-  const saveKey = (key: string) => {
-    setManualKey(key);
-    try {
-      localStorage.setItem(STORAGE_KEY, key);
-    } catch {
-      // 무시
-    }
-  };
+  // Vercel 서버리스 백엔드를 이용하므로 프론트엔드 키 검사 불필요
+  const apiKey = 'server-managed';
 
   const revealedCards = useMemo(
     () =>
@@ -182,10 +157,6 @@ export default function App() {
       setError('올바른 생년월일을 입력해 주세요.');
       return;
     }
-    if (!apiKey) {
-      setKeyModalOpen(true);
-      return;
-    }
 
     setStage('saju-loading');
     setError('');
@@ -241,10 +212,6 @@ export default function App() {
 
   const showReading = async () => {
     if (picked.length < MAX_PICKS || revealingIndex !== null) return;
-    if (!apiKey) {
-      setKeyModalOpen(true);
-      return;
-    }
     setStage('loading');
     setError('');
     try {
@@ -300,7 +267,6 @@ export default function App() {
   return (
     <div className="starfield-bg min-h-screen min-h-dvh text-mystic-300 font-sans relative overflow-x-hidden flex flex-col">
       <Starfield />
-      <ApiKeyModal open={keyModalOpen} onClose={() => setKeyModalOpen(false)} onSave={saveKey} />
 
       {/* 헤더 */}
       <header className="relative z-10 flex items-center justify-between px-4 pt-3 sm:px-6 sm:pt-5 w-full max-w-lg mx-auto shrink-0">
@@ -325,31 +291,8 @@ export default function App() {
           >
             {bgm.playing ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
           </button>
-          <button
-            type="button"
-            onClick={() => setKeyModalOpen(true)}
-            className="p-2 rounded-full border border-gold-500/30 text-gold-400 hover:bg-gold-500/10 transition-colors"
-            aria-label="설정"
-          >
-            <Settings className="w-4 h-4" />
-          </button>
         </div>
       </header>
-
-      {!apiKey && stage !== 'select' && (
-        <div className="relative z-10 w-full max-w-lg mx-auto px-4 mt-2 shrink-0">
-          <button
-            type="button"
-            onClick={() => setKeyModalOpen(true)}
-            className="w-full flex items-center gap-2 rounded-xl border border-gold-500/40 bg-gold-500/10 px-3 py-2.5 text-left text-xs text-gold-300 hover:bg-gold-500/15 transition-colors"
-          >
-            <Sparkles className="w-4 h-4 shrink-0" />
-            <span>
-              AI 해석을 위해 Gemini API 키가 필요해요. 여기를 눌러 입력해 주세요.
-            </span>
-          </button>
-        </div>
-      )}
 
       <main className="relative z-10 w-full max-w-lg mx-auto px-4 sm:px-6 flex-1 pb-10">
         {/* 1단계: 점술가 선택 + 고민 입력 + 듀얼 버튼 */}
@@ -636,9 +579,34 @@ export default function App() {
             <p className="font-serif text-gold-300 text-base animate-pulse">
               사주 명식을 분석하고 있습니다...
             </p>
-            <p className="mt-2 text-xs text-mystic-300/60">
-              {reader.name}가 타고난 기운과 운명을 풀이하고 있어요
-            </p>
+          </section>
+        )}
+
+        {/* 사주 결과 */}
+        {stage === 'saju-result' && (
+          <section className="mt-6 animate-fade-in-up">
+            <div className="text-center mb-6">
+              <h2 className="font-serif text-xl sm:text-2xl font-bold gold-text">
+                {reader.name}가 풀이한 사주 명식
+              </h2>
+              <p className="mt-1.5 text-xs text-mystic-300/70">
+                {sajuName}님의 운세 결과입니다.
+              </p>
+            </div>
+
+            <article className="rounded-2xl gold-border bg-night-900/70 backdrop-blur-sm p-5 sm:p-6 mb-4">
+              <div className="space-y-4 text-sm text-white/95 leading-[1.8] font-serif whitespace-pre-wrap">
+                {reading}
+              </div>
+            </article>
+
+            <button
+              type="button"
+              onClick={goHome}
+              className="w-full rounded-xl py-3 text-sm font-bold bg-gradient-to-r from-gold-500 to-gold-400 text-night-950 shadow-lg hover:brightness-110 transition-all"
+            >
+              처음으로 돌아가기
+            </button>
           </section>
         )}
 
@@ -737,7 +705,7 @@ export default function App() {
             <div className="relative w-16 h-16 mb-4">
               <div className="absolute inset-0 rounded-full border-2 border-gold-500/20" />
               <div className="absolute inset-0 rounded-full border-t-2 border-gold-400 animate-spin" />
-              <Star
+              <Sparkles
                 className="absolute inset-0 m-auto w-7 h-7 text-gold-300 animate-pulse"
                 strokeWidth={1.2}
               />
@@ -774,7 +742,7 @@ export default function App() {
               ))}
             </div>
 
-            <article className="rounded-2xl gold-border bg-night-900/70 backdrop-blur-sm p-5 sm:p-6">
+            <article className="rounded-2xl gold-border bg-night-900/70 backdrop-blur-sm p-5 sm:p-6 mb-4">
               <div className="mb-4 flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full overflow-hidden border border-gold-400/60 shrink-0">
                   <img src={reader.image} alt={reader.name} className="w-full h-full object-cover" />
@@ -795,190 +763,30 @@ export default function App() {
                 <div className="h-px flex-1 bg-gradient-to-l from-transparent to-gold-500/40" />
               </div>
               <div className="space-y-4 text-sm text-white/95 leading-[1.8] font-serif whitespace-pre-wrap">
-                {reading.split(/(\[[^\]]+\])/g).map((chunk, i) =>
-                  chunk.startsWith('[') && chunk.endsWith(']') ? (
-                    <p
-                      key={i}
-                      className="pt-2 font-bold text-gold-300 text-base tracking-wide"
-                    >
-                      {chunk.slice(1, -1)}
-                    </p>
-                  ) : (
-                    chunk.trim() && <p key={i}>{chunk.trim()}</p>
-                  )
-                )}
+                {reading}
               </div>
             </article>
 
-            <div className="mt-6 grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={goHome}
-                className="flex items-center justify-center gap-2 rounded-xl py-3.5 text-sm font-bold border border-gold-500/40 bg-night-800/60 text-gold-300 hover:bg-gold-500/10 transition-all active:scale-[0.98]"
-              >
-                <Home className="w-4 h-4" />
-                홈으로 가기
-              </button>
+            <div className="flex gap-2">
               <button
                 type="button"
                 onClick={copyResult}
-                className={`flex items-center justify-center gap-2 rounded-xl py-3.5 text-sm font-bold bg-gradient-to-r transition-all active:scale-[0.98] ${
-                  copied
-                    ? 'from-emerald-500 to-emerald-400 text-night-950'
-                    : 'from-gold-500 to-gold-400 text-night-950 hover:brightness-110'
-                }`}
+                className="flex-1 flex items-center justify-center gap-2 rounded-xl py-3 text-xs sm:text-sm font-bold border border-gold-500/40 bg-night-800 text-gold-300 hover:bg-gold-500/10 transition-all"
               >
-                {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
                 {copied ? '복사 완료!' : '결과 복사하기'}
               </button>
-            </div>
-          </section>
-        )}
-
-        {/* 결과 (사주) */}
-        {stage === 'saju-result' && (
-          <section className="mt-6 animate-fade-in-up">
-            <div className="text-center mb-6">
-              <h2 className="font-serif text-xl sm:text-2xl font-bold gold-text">
-                {sajuName}님의 사주 명식 풀이
-              </h2>
-              <p className="mt-1.5 text-xs text-mystic-300/70 leading-relaxed">
-                {reader.name} 명리 전문가가 분석한 운명의 지도입니다
-              </p>
-            </div>
-
-            <article className="rounded-2xl gold-border bg-night-900/70 backdrop-blur-sm p-5 sm:p-6">
-              <div className="mb-4 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full overflow-hidden border border-gold-400/60 shrink-0">
-                  <img src={reader.image} alt={reader.name} className="w-full h-full object-cover" />
-                </div>
-                <div>
-                  <p className="text-[10px] text-gold-400 font-serif tracking-[0.2em]">
-                    {reader.nameEn}
-                  </p>
-                  <p className="text-sm font-bold font-serif text-gold-200">
-                    {reader.name} 점술가
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 mb-4">
-                <div className="h-px flex-1 bg-gradient-to-r from-transparent to-gold-500/40" />
-                <CalendarIcon className="w-4 h-4 text-gold-400" />
-                <div className="h-px flex-1 bg-gradient-to-l from-transparent to-gold-500/40" />
-              </div>
-              <div className="space-y-4 text-sm text-white/95 leading-[1.8] font-serif whitespace-pre-wrap">
-                {reading.split(/(\[[^\]]+\])/g).map((chunk, i) =>
-                  chunk.startsWith('[') && chunk.endsWith(']') ? (
-                    <p
-                      key={i}
-                      className="pt-2 font-bold text-gold-300 text-base tracking-wide"
-                    >
-                      {chunk.slice(1, -1)}
-                    </p>
-                  ) : (
-                    chunk.trim() && <p key={i}>{chunk.trim()}</p>
-                  )
-                )}
-              </div>
-            </article>
-
-            <div className="mt-6 grid grid-cols-2 gap-3">
               <button
                 type="button"
                 onClick={goHome}
-                className="flex items-center justify-center gap-2 rounded-xl py-3.5 text-sm font-bold border border-gold-500/40 bg-night-800/60 text-gold-300 hover:bg-gold-500/10 transition-all active:scale-[0.98]"
+                className="flex-1 rounded-xl py-3 text-xs sm:text-sm font-bold bg-gradient-to-r from-gold-500 to-gold-400 text-night-950 shadow-lg hover:brightness-110 transition-all"
               >
-                <Home className="w-4 h-4" />
-                홈으로 가기
-              </button>
-              <button
-                type="button"
-                onClick={copyResult}
-                className={`flex items-center justify-center gap-2 rounded-xl py-3.5 text-sm font-bold bg-gradient-to-r transition-all active:scale-[0.98] ${
-                  copied
-                    ? 'from-emerald-500 to-emerald-400 text-night-950'
-                    : 'from-gold-500 to-gold-400 text-night-950 hover:brightness-110'
-                }`}
-              >
-                {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                {copied ? '복사 완료!' : '결과 복사하기'}
+                다른 고민 상담하기
               </button>
             </div>
           </section>
         )}
       </main>
-
-      {stage !== 'select' && stage !== 'saju-input' && (
-        <footer className="relative z-10 w-full max-w-lg mx-auto px-4 pb-6 sm:px-6 shrink-0">
-          <div
-            aria-label="배너 광고"
-            className="w-full min-h-[60px] sm:min-h-[90px] rounded-2xl border border-gold-500/25 bg-night-900/75 backdrop-blur-sm flex items-center justify-center overflow-hidden"
-          >
-            <span className="text-[10px] tracking-widest text-mystic-300/45 select-none">
-              AD BANNER
-            </span>
-          </div>
-        </footer>
-      )}
-
-      {/* 카드 선택 시 중앙 확대 뒤집기 오버레이 */}
-      {revealingItem && (
-        <div
-          onClick={confirmRevealedCard}
-          role="button"
-          tabIndex={0}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') confirmRevealedCard();
-          }}
-          className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-4 bg-black/85 backdrop-blur-sm px-5 py-6 select-none cursor-pointer transition-opacity duration-300"
-        >
-          <p className="text-xs font-serif tracking-widest text-gold-300 shrink-0">
-            선택하신 카드
-          </p>
-
-          <div
-            className={`h-[46dvh] max-h-[400px] min-h-[240px] aspect-[2/3] shrink-0 transition-all duration-500 ease-out ${
-              revealFlipped
-                ? 'scale-100 opacity-100 translate-y-0'
-                : 'scale-50 opacity-0 translate-y-10'
-            }`}
-          >
-            <TarotCardView
-              card={revealingItem.card}
-              reversed={revealingItem.reversed}
-              revealed={revealFlipped}
-              fit="contain"
-              index={picked.length}
-            />
-          </div>
-
-          <div
-            className={`w-full max-w-sm shrink-0 rounded-2xl border border-gold-400/40 bg-night-900/90 px-4 py-3 text-center shadow-xl transition-all duration-500 ${
-              revealFlipped ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'
-            }`}
-          >
-            <div className="flex items-center justify-center gap-2 text-xs font-serif text-gold-300">
-              <span>{revealingItem.card.nameKo}</span>
-              <span className="rounded-full border border-gold-400/40 bg-gold-500/15 px-2 py-0.5 text-[10px]">
-                {revealingItem.reversed ? '역방향' : '정방향'}
-              </span>
-            </div>
-            {revealingItem.keywords && (
-              <p className="mt-1 text-[11px] text-gold-200/80">
-                #{revealingItem.keywords.replace(/\s·\s/g, ' #')}
-              </p>
-            )}
-            <p className="mt-1.5 text-xs sm:text-sm text-white/95 leading-relaxed font-serif">
-              {revealingItem.meaning}
-            </p>
-          </div>
-
-          <p className="text-xs text-gold-200/80 animate-pulse shrink-0">
-            화면을 터치해주세요
-          </p>
-        </div>
-      )}
     </div>
   );
 }
