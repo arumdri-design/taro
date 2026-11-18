@@ -23,17 +23,17 @@ export default function FanSpread({ deck, picked, disabled, onPick }: FanSpreadP
   );
 
   const total = validDeck.length;
-  const radiusPercent = 37; // 원형 궤도 반지름 (%)
+  const radiusPercent = 40; // 가로 꽉 찬 원형 궤도 반지름 (%)
 
   return (
-    <div className="w-full h-full flex items-center justify-center select-none overflow-hidden py-1">
-      <div className="relative h-full max-h-[340px] aspect-square rounded-full border border-gold-500/20 bg-night-950/45 shadow-inner shadow-black/50 flex items-center justify-center">
+    <div className="w-full flex items-center justify-center select-none overflow-hidden">
+      <div className="relative w-full aspect-square rounded-full border border-gold-500/20 bg-night-950/45 shadow-inner shadow-black/50 flex items-center justify-center">
         {/* 원형 중앙 장식 */}
-        <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border border-gold-500/25 bg-night-900/60 flex flex-col items-center justify-center text-center pointer-events-none">
+        <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full border border-gold-500/25 bg-night-900/65 flex flex-col items-center justify-center text-center pointer-events-none">
           <span className="text-[10px] font-serif tracking-widest text-gold-400/80">
             ARCANA
           </span>
-          <span className="text-xs font-serif font-bold text-gold-200 mt-0.5">
+          <span className="text-sm font-serif font-bold text-gold-200 mt-0.5">
             {Math.max(0, total - picked.length)}장
           </span>
         </div>
@@ -68,7 +68,7 @@ export default function FanSpread({ deck, picked, disabled, onPick }: FanSpreadP
                 zIndex: isHovered ? 100 : revealed ? 1 : idx + 1,
               }}
               aria-label={`타로 카드 ${idx + 1}`}
-              className={`absolute w-7 sm:w-9 transition-transform duration-200 focus:outline-none ${
+              className={`absolute w-9 sm:w-11 transition-transform duration-200 focus:outline-none ${
                 revealed
                   ? 'opacity-0 pointer-events-none scale-75'
                   : isLocked
