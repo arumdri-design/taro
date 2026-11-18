@@ -23,7 +23,7 @@ import { getTarotReading, type DrawnCard } from '@/services/gemini';
 
 type Stage = 'question' | 'shuffle' | 'select' | 'loading' | 'result';
 
-const POSITIONS = ['과거', '현재', '미래'] as const;
+const SLOT_LABELS = ['첫 번째 카드', '두 번째 카드', '세 번째 카드'] as const;
 const MAX_PICKS = 3;
 const TOTAL_SHOWN = Math.min(78, tarotCards.length);
 const STORAGE_KEY = 'tarot-gemini-key';
@@ -106,7 +106,7 @@ export default function App() {
           if (!drawn || !drawn.card) return null;
           return {
             ...drawn,
-            position: POSITIONS[posIdx] ?? '선택 카드',
+            position: SLOT_LABELS[posIdx] ?? `${posIdx + 1}번째 카드`,
           };
         })
         .filter((item): item is DrawnCard & { position: string } => Boolean(item)),
@@ -120,7 +120,7 @@ export default function App() {
     const brief = getCardBriefInfo(drawn.card, drawn.reversed);
     return {
       ...drawn,
-      position: POSITIONS[picked.length] ?? '선택 카드',
+      position: SLOT_LABELS[picked.length] ?? `${picked.length + 1}번째 카드`,
       keywords: brief.keywords,
       meaning: brief.meaning,
     };
@@ -232,11 +232,7 @@ export default function App() {
   );
 
   return (
-    <div
-      className={`starfield-bg min-h-screen min-h-dvh text-mystic-300 font-sans relative overflow-hidden flex flex-col ${
-        stage === 'select' ? 'h-dvh' : ''
-      }`}
-    >
+    <div className="starfield-bg min-h-screen min-h-dvh text-mystic-300 font-sans relative overflow-x-hidden flex flex-col">
       <Starfield />
       <ApiKeyModal open={keyModalOpen} onClose={() => setKeyModalOpen(false)} onSave={saveKey} />
 
@@ -289,13 +285,7 @@ export default function App() {
         </div>
       )}
 
-      <main
-        className={`relative z-10 w-full max-w-lg mx-auto px-4 sm:px-6 flex-1 ${
-          stage === 'select'
-            ? 'flex flex-col justify-between overflow-hidden pt-2 pb-3 min-h-0'
-            : 'pb-10 overflow-y-auto'
-        }`}
-      >
+      <main className="relative z-10 w-full max-w-lg mx-auto px-4 sm:px-6 flex-1 pb-10">
         {/* 1단계: 점술가 선택 + 고민 입력 */}
         {stage === 'question' && (
           <section className="mt-4 animate-fade-in-up">
@@ -396,29 +386,25 @@ export default function App() {
           </section>
         )}
 
-        {/* 2단계: 카드 선택 (상단 3슬롯 바로 밑에 원형 배치) */}
+        {/* 2단계: 카드 선택 (상단 3슬롯 바로 밑에 원형 덱 배치) */}
         {stage === 'select' && (
-          <section className="flex flex-col gap-3 w-full animate-fade-in-up">
+          <section className="flex flex-col gap-3 w-full pt-2 animate-fade-in-up">
             <div className="shrink-0">
               {selectHeader(
                 `${reader.name}가 세 장의 카드를 기다립니다`,
-                <p>
-                  순서대로 <span className="text-gold-300">과거</span> ·{' '}
-                  <span className="text-gold-300">현재</span> ·{' '}
-                  <span className="text-gold-300">미래</span>의 카드가 됩니다
-                </p>
+                <p>선택한 3장의 카드가 순서대로 놓입니다</p>
               )}
 
               {/* 선택된 3장의 카드가 배치되는 슬롯 영역 */}
               <div className="mt-2 grid grid-cols-3 gap-2.5">
-                {POSITIONS.map((pos, i) => {
+                {SLOT_LABELS.map((slotName, i) => {
                   const selectedIdx = picked[i];
                   const selectedDrawn =
                     selectedIdx !== undefined ? deck[selectedIdx] : undefined;
 
                   return (
                     <div
-                      key={pos}
+                      key={slotName}
                       className={`rounded-xl border p-2 flex flex-col items-center justify-between transition-all ${
                         selectedDrawn
                           ? 'border-gold-400/80 bg-gold-500/15 text-gold-200 shadow-sm shadow-gold-500/10'
@@ -426,7 +412,7 @@ export default function App() {
                       }`}
                     >
                       <span className="text-[10px] font-serif font-bold text-gold-300 mb-1">
-                        {pos}
+                        {slotName}
                       </span>
 
                       {selectedDrawn ? (
@@ -490,7 +476,7 @@ export default function App() {
             </div>
           </section>
         )}
-        
+
         {/* 로딩 */}
         {stage === 'loading' && (
           <section className="mt-8 flex flex-col items-center animate-fade-in">
@@ -622,7 +608,7 @@ export default function App() {
           className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-4 bg-black/85 backdrop-blur-sm px-5 py-6 select-none cursor-pointer transition-opacity duration-300"
         >
           <p className="text-xs font-serif tracking-widest text-gold-300 shrink-0">
-            [{revealingItem.position}] 자리의 카드
+            선택하신 카드
           </p>
 
           <div
@@ -637,7 +623,6 @@ export default function App() {
               reversed={revealingItem.reversed}
               revealed={revealFlipped}
               fit="contain"
-              label={revealingItem.position}
               index={picked.length}
             />
           </div>
@@ -664,7 +649,7 @@ export default function App() {
           </div>
 
           <p className="text-xs text-gold-200/80 animate-pulse shrink-0">
-            화면을 터치하면 [{revealingItem.position}] 자리에 놓입니다
+            화면을 터치해주세요
           </p>
         </div>
       )}
