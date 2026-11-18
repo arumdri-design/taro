@@ -639,7 +639,6 @@ export default function App() {
                         {slotName}
                       </span>
 
-                      {/* 상단 슬롯 카드 영역: aspect-[2/3]와 relative를 적용해 찌그러짐 방지 */}
                       {selectedDrawn ? (
                         <div className="w-14 sm:w-16 aspect-[2/3] relative">
                           <TarotCardView
@@ -701,19 +700,12 @@ export default function App() {
           </section>
         )}
 
-        {/* 카드 개별 선택 시 자동 뒤집힘 및 터치 유도 창 (카드 크기 및 세로 영역 확장) */}
+        {/* 카드 개별 선택 시 자동 뒤집힘 및 터치 유도 창 (가로 여백을 줄이고 카드 크기를 큼직하게 확장) */}
         {revealingIndex !== null && revealingItem && (
           <div 
             onClick={handlePopupClick}
             className="fixed inset-0 z-50 flex items-center justify-center bg-night-950/85 backdrop-blur-md p-4 animate-fade-in cursor-pointer"
           >
-            {/* 카드 개별 선택 시 자동 뒤집힘 및 터치 유도 창 (카드 크기 극대화) */}
-        {revealingIndex !== null && revealingItem && (
-          <div 
-            onClick={handlePopupClick}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-night-950/85 backdrop-blur-md p-4 animate-fade-in cursor-pointer"
-          >
-            {/* 팝업 박스 자체의 최대 너비를 max-w-xs로 모아주고 패딩을 슬림하게 조정 */}
             <div className="w-full max-w-xs rounded-2xl gold-border bg-night-900 p-4 text-center shadow-2xl animate-scale-up" onClick={(e) => e.stopPropagation()}>
               <p className="text-xs text-gold-400 font-serif mb-0.5">
                 {revealingItem.position}
@@ -722,7 +714,7 @@ export default function App() {
                 선택하신 카드
               </h3>
 
-              {/* 핵심 수정: 카드 너비를 w-56(약 224px)으로 대폭 키워 가로 여백을 없애고 시원하게 꽉 채움 */}
+              {/* 카드 너비를 w-56(약 224px)로 넓혀 좌우 불필요한 여백을 없애고 꽉 차게 표시 */}
               <div 
                 onClick={handlePopupClick}
                 className="w-56 mx-auto mb-3 aspect-[2/3] cursor-pointer shadow-2xl relative"
