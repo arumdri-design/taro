@@ -7,19 +7,20 @@ export async function getSajuReading(
   reader: Reader,
   apiKey: string
 ): Promise<string> {
-  if (!apiKey) {
-    throw new Error('Gemini API 키가 필요합니다.');
+  if (!apiKey || typeof apiKey !== 'string') {
+    throw new Error('Gemini API 키가 올바르지 않습니다.');
   }
 
-  const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
+  try {
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
 
-  const genderText = input.gender === 'male' ? '남성' : '여성';
-  const calendarText = input.calendar === 'solar' ? '양력' : '음력';
-  const hourText = input.birthHour !== undefined ? `${input.birthHour}시 경` : '시간 미상';
+    const genderText = input.gender === 'male' ? '남성' : '여성';
+    const calendarText = input.calendar === 'solar' ? '양력' : '음력';
+    const hourText = input.birthHour !== undefined ? `${input.birthHour}시 경` : '시간 미상';
 
-  const prompt = `
-당신은 깊은 통찰력과 신비로운 지혜를 지닌 전문 점성술사이자 명리학자이며, 밤하늘 타로 상담소의 파트너 ${reader.name}(${reader.nameEn})입니다.
+    const prompt = `
+당신은 깊은 통찰력과 신비로운 지혜를 지닌 전문 점성술사이이자 명리학자이며, 밤하늘 타로 상담소의 파트너 ${reader.name}(${reader.nameEn})입니다.
 아래 내담자의 사주 명식 및 생년월일시 정보를 바탕으로 정성스럽고 깊이 있는 사주팔자·점성술 운세 풀이를 작성해 주세요.
 
 [내담자 정보]
@@ -36,13 +37,19 @@ export async function getSajuReading(
 4. 마크다운 형식으로 풍부하고 몰입감 있게 작성해 주세요.
 `.trim();
 
-  const result = await model.generateContent(prompt);
-  const response = await result.response;
-  const text = response.text();
-  
-  if (!text) {
-    throw new Error('AI로부터 운세 응답을 생성하지 못했어요.');
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
+
+    if (!text) {
+      throw new Error('AI로부터 응답을 받지 못했습니다.');
+    }
+
+    return text;
+  } catch (err: unknown) {
+    if (err instanceof Error) {
+      throw new Error(err.message);
+    }
+    throw new Error('사주 및 운세 풀이 중 알 수 없는 오류가 발생했습니다.');
   }
-  
-  return text;
 }
