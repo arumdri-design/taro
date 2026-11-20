@@ -548,7 +548,7 @@ export default function App() {
               {[0, 1, 2, 3, 4].map((i) => (
                 <div
                   key={i}
-                  className="w-14 aspect-[270/450] rounded-lg border border-gold-500/40 bg-night-900 overflow-hidden animate-shuffle"
+                  className="w-14 sm:w-16 aspect-[270/450] rounded-lg border border-gold-500/40 bg-night-900 overflow-hidden animate-shuffle"
                   style={{ animationDelay: `${i * 0.1}s` }}
                 >
                   <img
