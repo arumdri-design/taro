@@ -35,7 +35,7 @@ function buildCandidatePaths(card: TarotCard): string[] {
     candidates.push(
       `/cards/${suit}-${paddedMinor}.png`,
       `/cards/${suit}_${paddedMinor}.png`,
-      `/images/cards/${suit}-${paddedMinor}.png`
+      `/cards/${suit}-${paddedMinor}.png`
     );
   }
 
@@ -51,7 +51,7 @@ export default function TarotCardView({
   disabled,
   label,
   index = 0,
-  fit = 'contain',
+  fit = 'cover',
 }: TarotCardViewProps) {
   const [backSrc, setBackSrc] = useState(DEFAULT_CARD_BACK);
   const candidatePaths = useMemo(() => buildCandidatePaths(card), [card]);
@@ -65,7 +65,7 @@ export default function TarotCardView({
   const imgFailed = candidateIdx >= candidatePaths.length;
 
   const imgFitClass =
-    fit === 'cover' ? 'object-cover' : 'object-contain bg-night-950';
+    fit === 'contain' ? 'object-contain bg-night-950' : 'object-cover scale-[1.03]';
 
   const Wrapper = onClick ? 'button' : 'div';
 
@@ -93,7 +93,7 @@ export default function TarotCardView({
       >
         {/* 뒷면 */}
         <div
-          className="tarot-card-face absolute inset-0 w-full h-full rounded-xl overflow-hidden border border-gold-500/40 shadow-lg shadow-black/50 bg-night-900 flex items-center justify-center"
+          className="tarot-card-face absolute inset-0 w-full h-full rounded-xl overflow-hidden border border-gold-500/40 shadow-lg shadow-black/50 bg-night-900"
           style={{ backfaceVisibility: 'hidden' }}
         >
           <img
@@ -104,7 +104,7 @@ export default function TarotCardView({
                 setBackSrc(DEFAULT_CARD_BACK);
               }
             }}
-            className="w-full h-full object-contain block select-none"
+            className="w-full h-full object-cover block select-none"
             draggable={false}
           />
         </div>
@@ -112,7 +112,7 @@ export default function TarotCardView({
         {/* 앞면 */}
         {revealed && (
           <div
-            className="absolute inset-0 w-full h-full rounded-xl overflow-hidden border border-gold-400/60 shadow-xl bg-night-950 flex items-center justify-center"
+            className="absolute inset-0 w-full h-full rounded-xl overflow-hidden border border-gold-400/60 shadow-xl bg-night-950"
             style={{
               backfaceVisibility: 'hidden',
               transform: 'rotateY(180deg)',
