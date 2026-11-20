@@ -13,25 +13,26 @@ export interface TarotRequest {
   reader: Reader;
 }
 
-// 지정된 시간(기본 25초) 내에 응답이 없으면 타임아웃 발생
 function withTimeout<T>(promise: Promise<T>, ms = 25000): Promise<T> {
   return Promise.race([
     promise,
     new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error('응답 시간이 초과되었습니다. 다시 시도해 주세요.')), ms)
+      setTimeout(
+        () => reject(new Error('응답 시간이 초과되었습니다. 다시 시도해 주세요.')),
+        ms
+      )
     ),
   ]);
 }
 
-// Vercel 서버리스 백엔드(/api/fortune) 호출 함수
-async function callFortuneApi(payload: Record<string, unknown>): Promise<string> {
+async function callFortuneApi(body: Record<string, unknown>): Promise<string> {
   const response = await withTimeout(
     fetch('/api/fortune', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(body),
     }),
     25000
   );
@@ -46,7 +47,8 @@ async function callFortuneApi(payload: Record<string, unknown>): Promise<string>
     throw new Error(serverMsg);
   }
 
-  const text = data?.reading || data?.result || data?.text || data?.message;
+  const text =
+    data?.reading || data?.result || data?.text || data?.message || data?.content;
   if (typeof text !== 'string' || !text.trim()) {
     throw new Error('AI 응답 본문이 비어 있습니다.');
   }
@@ -83,10 +85,9 @@ ${cardDescriptions}
 [카드별 세부 해석]
 [${reader.name}의 조언]`;
 
-  return await callFortuneApi({
-    type: 'tarot',
-    prompt,
+  const payload = {
     question,
+    prompt,
     cards: cards.map((c) => ({
       nameKo: c.card.nameKo,
       nameEn: c.card.nameEn,
@@ -100,6 +101,12 @@ ${cardDescriptions}
       personality: reader.personality,
       greeting: reader.greeting,
     },
+  };
+
+  return await callFortuneApi({
+    type: 'tarot',
+    mode: 'tarot',
+    payload,
   });
 }
 
@@ -110,7 +117,8 @@ export async function getSajuReading(
 ): Promise<string> {
   const genderText = input.gender === 'male' ? '남성' : '여성';
   const calText = input.calendar === 'solar' ? '양력' : '음력';
-  const hourText = input.birthHour !== undefined ? `${input.birthHour}시` : '태어난 시간 모름';
+  const hourText =
+    input.birthHour !== undefined ? `${input.birthHour}시` : '태어난 시간 모름';
 
   const prompt = `당신은 '${reader.name}'(${reader.nameEn})이라는 이름의 사주 명리학 및 운세 전문가입니다.
 성격 및 말투: ${reader.personality}
@@ -129,10 +137,9 @@ export async function getSajuReading(
 [재물·연애·직업운 조언]
 [${reader.name}의 개운 메시지]`;
 
-  return await callFortuneApi({
-    type: 'saju',
-    prompt,
+  const payload = {
     input,
+    prompt,
     reader: {
       id: reader.id,
       name: reader.name,
@@ -140,5 +147,11 @@ export async function getSajuReading(
       personality: reader.personality,
       greeting: reader.greeting,
     },
+  };
+
+  return await callFortuneApi({
+    type: 'saju',
+    mode: 'saju',
+    payload,
   });
 }
