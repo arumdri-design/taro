@@ -51,7 +51,7 @@ export default function TarotCardView({
   disabled,
   label,
   index = 0,
-  fit = 'contain', // 기본값을 contain으로 변경하여 세로 잘림 방지
+  fit = 'cover',
 }: TarotCardViewProps) {
   const [backSrc, setBackSrc] = useState(DEFAULT_CARD_BACK);
   const candidatePaths = useMemo(() => buildCandidatePaths(card), [card]);
@@ -64,7 +64,8 @@ export default function TarotCardView({
   const frontSrc = candidatePaths[candidateIdx] ?? DEFAULT_CARD_BACK;
   const imgFailed = candidateIdx >= candidatePaths.length;
 
-  const imgFitClass = 'object-contain w-full h-full';
+  const imgFitClass =
+    fit === 'contain' ? 'object-contain bg-night-950' : 'object-cover';
 
   const Wrapper = onClick ? 'button' : 'div';
 
@@ -84,7 +85,7 @@ export default function TarotCardView({
       }
     >
       <div
-        className="tarot-card-inner absolute inset-0 w-full h-full transition-transform duration-500"
+        className="tarot-card-inner relative w-full h-full transition-transform duration-500"
         style={{
           transformStyle: 'preserve-3d',
           transform: revealed ? 'rotateY(180deg)' : 'rotateY(0deg)',
@@ -92,7 +93,7 @@ export default function TarotCardView({
       >
         {/* 뒷면 */}
         <div
-          className="tarot-card-face absolute inset-0 w-full h-full rounded-xl overflow-hidden border border-gold-500/40 shadow-lg shadow-black/50 bg-night-900 flex items-center justify-center"
+          className="tarot-card-face absolute inset-0 w-full h-full rounded-xl overflow-hidden border border-gold-500/40 shadow-lg shadow-black/50 bg-night-900"
           style={{ backfaceVisibility: 'hidden' }}
         >
           <img
@@ -103,7 +104,7 @@ export default function TarotCardView({
                 setBackSrc(DEFAULT_CARD_BACK);
               }
             }}
-            className="w-full h-full object-contain block select-none"
+            className="w-full h-full object-cover block select-none"
             draggable={false}
           />
         </div>
@@ -111,7 +112,7 @@ export default function TarotCardView({
         {/* 앞면 */}
         {revealed && (
           <div
-            className="absolute inset-0 w-full h-full rounded-xl overflow-hidden border border-gold-400/60 shadow-xl bg-night-950 flex flex-col justify-between items-center"
+            className="absolute inset-0 w-full h-full rounded-xl overflow-hidden border border-gold-400/60 shadow-xl bg-night-950"
             style={{
               backfaceVisibility: 'hidden',
               transform: 'rotateY(180deg)',
