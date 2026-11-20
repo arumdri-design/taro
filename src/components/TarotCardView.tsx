@@ -26,10 +26,8 @@ function buildCandidatePaths(card: TarotCard): string[] {
 
   if (card.arcana === 'major') {
     candidates.push(
-      `/cards/major-${paddedId}.png`,
-      `/cards/${paddedId}.png`,
-      `/images/cards/major-${paddedId}.png`,
-      `/images/cards/${paddedId}.png`
+      `/cards/major-${paddedId}.png`, `/cards/${paddedId}.png`,
+      `/images/cards/major-${paddedId}.png`, `/images/cards/${paddedId}.png`
     );
   } else {
     candidates.push(
@@ -65,19 +63,14 @@ export default function TarotCardView({
   const imgFailed = candidateIdx >= candidatePaths.length;
 
   const imgFitClass =
-    fit === 'contain' ? 'object-contain bg-night-950' : 'object-cover scale-[1.03]';
+    fit === 'contain' ? 'object-contain bg-night-950' : 'object-cover';
 
   const Wrapper = onClick ? 'button' : 'div';
 
   return (
     <Wrapper
       {...(onClick ? { type: 'button' as const, onClick, disabled } : {})}
-      className={`tarot-card relative w-full h-full aspect-[250/429] rounded-xl transition-all duration-300 focus:outline-none ${
-        onClick && !disabled ? 'cursor-pointer hover:-translate-y-1' : ''
-      } ${selected ? 'scale-105' : ''} ${
-        disabled && !selected ? 'opacity-30' : ''
-      }`}
-      style={{ animationDelay: `${index * 20}ms`, perspective: '1000px' }}
+      className={`tarot-card relative w-full h-full aspect-[270/450] rounded-xl transition-all duration-300 focus:outline-none ${ onClick && !disabled ? 'cursor-pointer hover:-translate-y-1' : '' } ${selected ? 'scale-105' : ''} ${ disabled && !selected ? 'opacity-30' : '' }`} style={{ animationDelay: `${index * 20}ms`, perspective: '1000px' }}
       aria-label={
         revealed
           ? `${card.nameKo} (${reversed ? '역방향' : '정방향'})`
