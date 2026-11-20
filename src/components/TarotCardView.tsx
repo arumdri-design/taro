@@ -51,7 +51,7 @@ export default function TarotCardView({
   disabled,
   label,
   index = 0,
-  fit = 'cover',
+  fit = 'contain',
 }: TarotCardViewProps) {
   const [backSrc, setBackSrc] = useState(DEFAULT_CARD_BACK);
   const candidatePaths = useMemo(() => buildCandidatePaths(card), [card]);
@@ -65,14 +65,14 @@ export default function TarotCardView({
   const imgFailed = candidateIdx >= candidatePaths.length;
 
   const imgFitClass =
-    fit === 'contain' ? 'object-contain bg-night-950' : 'object-cover';
+    fit === 'cover' ? 'object-cover' : 'object-contain bg-night-950';
 
   const Wrapper = onClick ? 'button' : 'div';
 
   return (
     <Wrapper
       {...(onClick ? { type: 'button' as const, onClick, disabled } : {})}
-      className={`tarot-card relative w-full aspect-[2/3] rounded-xl transition-all duration-300 focus:outline-none ${
+      className={`tarot-card relative w-full h-full aspect-[250/429] rounded-xl transition-all duration-300 focus:outline-none ${
         onClick && !disabled ? 'cursor-pointer hover:-translate-y-1' : ''
       } ${selected ? 'scale-105' : ''} ${
         disabled && !selected ? 'opacity-30' : ''
@@ -93,7 +93,7 @@ export default function TarotCardView({
       >
         {/* 뒷면 */}
         <div
-          className="tarot-card-face absolute inset-0 w-full h-full rounded-xl overflow-hidden border border-gold-500/40 shadow-lg shadow-black/50 bg-night-900"
+          className="tarot-card-face absolute inset-0 w-full h-full rounded-xl overflow-hidden border border-gold-500/40 shadow-lg shadow-black/50 bg-night-900 flex items-center justify-center"
           style={{ backfaceVisibility: 'hidden' }}
         >
           <img
@@ -104,7 +104,7 @@ export default function TarotCardView({
                 setBackSrc(DEFAULT_CARD_BACK);
               }
             }}
-            className="w-full h-full object-cover block select-none"
+            className="w-full h-full object-contain block select-none"
             draggable={false}
           />
         </div>
@@ -112,7 +112,7 @@ export default function TarotCardView({
         {/* 앞면 */}
         {revealed && (
           <div
-            className="absolute inset-0 w-full h-full rounded-xl overflow-hidden border border-gold-400/60 shadow-xl bg-night-950"
+            className="absolute inset-0 w-full h-full rounded-xl overflow-hidden border border-gold-400/60 shadow-xl bg-night-950 flex items-center justify-center"
             style={{
               backfaceVisibility: 'hidden',
               transform: 'rotateY(180deg)',
