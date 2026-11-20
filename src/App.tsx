@@ -548,13 +548,13 @@ export default function App() {
               {[0, 1, 2, 3, 4].map((i) => (
                 <div
                   key={i}
-                  className="w-14 h-24 sm:w-16 sm:h-28 rounded-lg border border-gold-500/40 bg-night-900 overflow-hidden animate-shuffle"
+                  className="w-14 aspect-[250/429] rounded-lg border border-gold-500/40 bg-night-900 overflow-hidden animate-shuffle"
                   style={{ animationDelay: `${i * 0.1}s` }}
                 >
                   <img
                     src="/images/card-back.png"
                     alt="카드 뒷면"
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-contain"
                   />
                 </div>
               ))}
@@ -639,17 +639,18 @@ export default function App() {
                       </span>
 
                       {selectedDrawn ? (
-                        <div className="w-14 sm:w-16 aspect-[2/3] relative">
+                        <div className="w-12 sm:w-14 aspect-[250/429] relative">
                           <TarotCardView
                             card={selectedDrawn.card}
                             reversed={selectedDrawn.reversed}
                             revealed
                             selected
                             index={i}
+                            fit="contain"
                           />
                         </div>
                       ) : (
-                        <div className="w-14 sm:w-16 aspect-[2/3] rounded-lg border border-gold-500/20 bg-night-950/60 flex items-center justify-center">
+                        <div className="w-12 sm:w-14 aspect-[250/429] rounded-lg border border-gold-500/20 bg-night-950/60 flex items-center justify-center">
                           <span className="text-[10px] text-mystic-300/40">
                             {i + 1}번째
                           </span>
@@ -712,19 +713,19 @@ export default function App() {
               <p className="text-xs text-gold-400 font-serif mb-0.5">
                 {revealingItem.position}
               </p>
-              <h3 className="text-base font-bold font-serif text-gold-200 mb-2">
+              <h3 className="text-base font-bold font-serif text-gold-200 mb-2.5">
                 선택하신 카드
               </h3>
 
               <div
                 onClick={handlePopupClick}
-                className="w-56 mx-auto mb-3 aspect-[2/3] cursor-pointer shadow-2xl relative"
+                className="w-52 mx-auto mb-3 aspect-[250/429] cursor-pointer shadow-2xl relative"
               >
                 <TarotCardView
                   card={revealingItem.card}
                   reversed={revealingItem.reversed}
                   revealed={revealFlipped}
-                  fit="cover"
+                  fit="contain"
                 />
               </div>
 
@@ -784,13 +785,14 @@ export default function App() {
 
             <div className="flex justify-center gap-3 mb-6">
               {revealedCards.map((drawn, i) => (
-                <div key={i} className="w-28 sm:w-32 aspect-[2/3] relative">
+                <div key={i} className="w-24 sm:w-28 aspect-[250/429] relative">
                   <TarotCardView
                     card={drawn.card}
                     reversed={drawn.reversed}
                     revealed
                     label={drawn.position}
                     index={i}
+                    fit="contain"
                   />
                 </div>
               ))}
