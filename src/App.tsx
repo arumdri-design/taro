@@ -1,9 +1,8 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   Moon,
   Sparkles,
   Copy,
-  Settings,
   AlertTriangle,
   Volume2,
   VolumeX,
@@ -71,7 +70,7 @@ function getCardBriefInfo(card: TarotCard | undefined, reversed: boolean) {
 export default function App() {
   const [stage, setStage] = useState<Stage>('question');
   const [question, setQuestion] = useState('');
-  
+
   // 사주 입력 상태
   const [sajuName, setSajuName] = useState('');
   const [sajuGender, setSajuGender] = useState<SajuGender>('male');
@@ -700,13 +699,16 @@ export default function App() {
           </section>
         )}
 
-        {/* 카드 개별 선택 시 자동 뒤집힘 및 터치 유도 창 (가로 여백을 줄이고 카드 크기를 큼직하게 확장) */}
+        {/* 카드 개별 선택 시 자동 뒤집힘 및 터치 유도 창 */}
         {revealingIndex !== null && revealingItem && (
-          <div 
+          <div
             onClick={handlePopupClick}
             className="fixed inset-0 z-50 flex items-center justify-center bg-night-950/85 backdrop-blur-md p-4 animate-fade-in cursor-pointer"
           >
-            <div className="w-full max-w-xs rounded-2xl gold-border bg-night-900 p-4 text-center shadow-2xl animate-scale-up" onClick={(e) => e.stopPropagation()}>
+            <div
+              className="w-full max-w-xs rounded-2xl gold-border bg-night-900 p-4 text-center shadow-2xl animate-scale-up"
+              onClick={(e) => e.stopPropagation()}
+            >
               <p className="text-xs text-gold-400 font-serif mb-0.5">
                 {revealingItem.position}
               </p>
@@ -714,8 +716,7 @@ export default function App() {
                 선택하신 카드
               </h3>
 
-              {/* 카드 너비를 w-56(약 224px)로 넓혀 좌우 불필요한 여백을 없애고 꽉 차게 표시 */}
-              <div 
+              <div
                 onClick={handlePopupClick}
                 className="w-56 mx-auto mb-3 aspect-[2/3] cursor-pointer shadow-2xl relative"
               >
@@ -723,7 +724,7 @@ export default function App() {
                   card={revealingItem.card}
                   reversed={revealingItem.reversed}
                   revealed={revealFlipped}
-                  fit="contain"
+                  fit="cover"
                 />
               </div>
 
