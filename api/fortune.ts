@@ -20,7 +20,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
-    return res.status(500).json({ error: 'Server API Key not configured' });
+    return res.status(500).json({ error: 'Server OPENAI_API_KEY not configured' });
   }
 
   try {
@@ -95,7 +95,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const data = await response.json();
     if (!response.ok) {
-      throw new Error(data.error?.message || 'OpenAI API Error');
+      throw new Error(data?.error?.message || 'OpenAI API Error');
     }
 
     const resultText = data?.choices?.[0]?.message?.content?.trim();
